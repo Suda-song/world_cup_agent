@@ -274,8 +274,8 @@ export default function BracketPage() {
         </div>
       </div>
 
-      {/* 淘汰赛对阵图 + 推理面板 */}
-      <div className="grid grid-cols-1 xl:grid-cols-[1fr_360px] gap-5">
+      {/* 淘汰赛对阵图 */}
+      <div>
         {/* 对阵图 */}
         <div>
           <h2 className="text-lg font-bold mb-3 flex items-center gap-2">
@@ -362,26 +362,25 @@ export default function BracketPage() {
           </p>
         </div>
 
-        {/* 推理面板 */}
-        <div className="xl:sticky xl:top-4 xl:self-start">
-          {selectedMatch ? (
+      </div>
+
+      {/* 推理面板 —— 固定浮动在右下角，选中比赛后出现 */}
+      {selectedMatch && (
+        <div className="fixed bottom-6 right-6 z-50 w-[360px] max-h-[80vh] overflow-y-auto shadow-2xl rounded-2xl">
+          <div className="relative">
+            <button
+              onClick={() => setSelectedMatch(null)}
+              className="absolute top-3 right-3 z-10 w-6 h-6 rounded-full bg-surface-2 hover:bg-surface flex items-center justify-center text-muted hover:text-foreground text-xs transition-colors"
+            >
+              ✕
+            </button>
             <MatchReasoningPanel
               match={selectedMatch}
               championId={result.champion}
             />
-          ) : (
-            <div className="rounded-2xl border border-dashed border-border bg-surface/30 p-8 text-center">
-              <div className="text-3xl mb-2">🔍</div>
-              <div className="text-sm font-medium text-muted">
-                点击左侧比赛卡片
-              </div>
-              <div className="text-xs text-muted mt-1">
-                查看预测推理链路、关键指标与 Qwen AI 赛事分析
-              </div>
-            </div>
-          )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* 冠军之路 */}
       <div>
