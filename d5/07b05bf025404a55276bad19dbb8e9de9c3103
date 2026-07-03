@@ -1,0 +1,118 @@
+lib/agent/worldcupAgent.ts
+  s_eed400b37abf65::t_13c8ef15480f47 1-321
+lib/prediction/monteCarlo.ts
+  s_eed400b37abf65::t_eb907d247f4529 1,27-28,43
+app/page.tsx
+  s_b2bb477cc3bc7f::t_185f35f1d797b8 6-19,21-48,51-54,56-57,59-68,74,76-77,92-94,97-110,113,116,121-123,129-150,154-158,161-165,170-171,182,192,194,196-201
+  s_b2bb477cc3bc7f::t_9ad4c890780c26 83-87
+  s_b2bb477cc3bc7f::t_abbd1e58ce8068 3-4,49-50,55,71-72,75,78-82,88,91,95-96,114-115,117-120,124-126,128,152-153,159-160,166-167,173-176,178-181,183-186,188,191,193,195,202-203
+app/layout.tsx
+  s_b2bb477cc3bc7f::t_c343ad8cfabcab 47
+  s_eed400b37abf65::t_bab63f969e1657 5,46
+  s_b2bb477cc3bc7f::t_11aab6fdfbe17c 6
+components/layout/Sidebar.tsx
+  s_b2bb477cc3bc7f::t_5dfdf0cedc0a21 16
+  s_b2bb477cc3bc7f::t_3bbd4b6ca740f4 51
+  s_eed400b37abf65::t_bab63f969e1657 15
+  s_b2bb477cc3bc7f::t_027f43d4575486 98,159,180
+app/matchup/page.tsx
+  s_c6ba1bd0e4ee53::t_1c9bcf88902543 1,4
+lib/agent/qwen.ts
+  s_eed400b37abf65::t_13c8ef15480f47 1-23,25-26,37-41,43-46,48-53,55-56,61-67
+  s_eed400b37abf65::t_5b974d3b5afc10 24,27-36,42,47,54,57-60
+components/agent/FloatingAgent.tsx
+  s_b2bb477cc3bc7f::t_cffff656f3b118 3,7,9,14,17-20,22-35,37-42,44-45,48,51-86,89-97,103-105,109-111,114-116,121,127-159,163,165-166,169,172,175-190,193,198-200,204-205,210-215,223,225,227-230
+  s_b2bb477cc3bc7f::t_f63cbd4488cb29 15
+  s_b2bb477cc3bc7f::t_9f673d125f22d8 5
+  s_b2bb477cc3bc7f::t_b69007b346ad5a 197
+  s_eed400b37abf65::t_90b0002a2357b9 1-2,4,6,8,10-11,13,16,21,36,43,46-47,49-50,87-88,98-102,106,108,112-113,117-120,122-126,160-162,164,167-168,170-171,173-174,191-192,194-196,201-203,206-209,216-222,224,226,231-234
+  s_b2bb477cc3bc7f::t_0570954b15c331 12
+  s_b2bb477cc3bc7f::t_9ddd9771371ea4 107
+lib/store.ts
+  s_eed400b37abf65::t_bbbbf022b00af1 114-118
+  s_eed400b37abf65::t_fe32a0d08e711b 7,11-12,14-28,105,108
+  s_b2bb477cc3bc7f::t_c7ffeba743e567 126-131
+  s_eed400b37abf65::t_ab71117f824a33 13
+  s_b2bb477cc3bc7f::t_6d338b09fb2951 51-63,72-74,79-81
+  s_b2bb477cc3bc7f::t_9556c9ee95afae 99-100
+.env.example
+  s_eed400b37abf65::t_675d0171690260 1-2,4-5
+lib/agent/report.ts
+  s_eed400b37abf65::t_13c8ef15480f47 1-100
+app/agent/page.tsx
+  s_b2bb477cc3bc7f::t_04b42a436d464a 275
+  s_b2bb477cc3bc7f::t_d596b27f1fad67 272
+  s_eed400b37abf65::t_90b0002a2357b9 1-2,5,7,15,161,168,187,189,193,195-196,237-238,248-252,257,279,293,322,345,351,355-357,364,367,373,426-428
+  s_b2bb477cc3bc7f::t_fbd65593e12f92 6,162-166,181-182,188,190-191,205,220,233,239,258,398
+  s_b2bb477cc3bc7f::t_2c9be8b423d31e 4,9,11-12,16-160,273-274,277-278,280-290,299-301,311-312,316,323-344,346-350,352-354,360-361,379,402
+  s_b2bb477cc3bc7f::t_0d6c81b93b8759 3,8,10,13-14,167,169-180,183-186,192,194,197-204,206-219,221-232,234-236,240-247,253-256,259-271,276,291-292,294-298,302-307,309-310,313-315,317-321,358-359,362-363,365-366,368-372,374-378,380-397,399-401,403-425
+  s_b2bb477cc3bc7f::t_a13946d057a658 308
+app/api/agent/chat/route.ts
+  s_b2bb477cc3bc7f::t_e6f392feb86766 1,3-11,109-112,115-133,137,144,158-164,166-172,176-178,185-187,190-192,198,200,202,204-218
+  s_b2bb477cc3bc7f::t_45f2764ac8479b 2,12-108,113-114,134-136,138-143,145-157,165,173-175,179-184,188-189,193-197,199,201,203
+app/api/live-results/route.ts
+  s_eed400b37abf65::t_0b26257bb729db 2,8-17,103,180
+  s_eed400b37abf65::t_b1d500add0deb2 113,115,121
+lib/types.ts
+  s_eed400b37abf65::t_835380fdc36c08 99-119
+app/api/agent/worldcup/route.ts
+  s_eed400b37abf65::t_13c8ef15480f47 1-23
+app/api/sentiment/route.ts
+  s_eed400b37abf65::t_5b974d3b5afc10 55-70,74,85-87,89-93
+components/matchup/MatchupPanel.tsx
+  s_c6ba1bd0e4ee53::t_4e4f316ee214bc 1-192
+components/common/EntryGuard.tsx
+  s_b2bb477cc3bc7f::t_6e6679b199ea7a 7-13,19,21-29,31-41,43-44,47
+  s_b2bb477cc3bc7f::t_6e443074368901 1-6,14-18,20,30,42,45-46,48-51
+app/api/analyze/route.ts
+  s_eed400b37abf65::t_5b974d3b5afc10 76-90,97,101-102,109
+  s_eed400b37abf65::t_bab63f969e1657 61-62,67-68
+app/dashboard/page.tsx
+  s_b2bb477cc3bc7f::t_1044825901128f 1-160
+lib/api/client.ts
+  s_eed400b37abf65::t_e111f8c53c0add 10,21
+scripts/deploy.sh
+  s_b2bb477cc3bc7f::t_ce819e72097b0e 65
+lib/prediction/simulator.ts
+  s_eed400b37abf65::t_393df3340705bc 152
+  s_eed400b37abf65::t_d88c06b05fc94d 1,40-43,48-52,54-59,61-106,116-117,131-134,136-143,145-151,156-161,163-175,180,216,218,221,223,234,239,242,245,248,251-253,255,258
+  s_eed400b37abf65::t_08c756dfb75fee 44-47,53,60,135,162,219
+  s_eed400b37abf65::t_64ecf9277f63c3 107-114,237-238,240-241,243-244,246-247,249-250,260-261
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.9",
+  "base_commit_sha": "d507b05bf025404a55276bad19dbb8e9de9c3103",
+  "prompts": {},
+  "humans": {
+    "h_9d3c9d76b5b792": {
+      "author": "songdingan1 <songdingan1@xiaohongshu.com>"
+    }
+  },
+  "sessions": {
+    "s_b2bb477cc3bc7f": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "416cf002-30d1-48e9-b173-4e401d24d8ac",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "songdingan1 <songdingan1@xiaohongshu.com>"
+    },
+    "s_c6ba1bd0e4ee53": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f283d-25bb-7392-9aee-bfbdf277c851",
+        "model": "gpt-5.5"
+      },
+      "human_author": "songdingan1 <songdingan1@xiaohongshu.com>"
+    },
+    "s_eed400b37abf65": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f2835-8688-7520-89ae-052ec2343235",
+        "model": "gpt-5.5"
+      },
+      "human_author": "songdingan1 <songdingan1@xiaohongshu.com>"
+    }
+  }
+}
