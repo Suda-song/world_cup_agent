@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { TEAMS } from "@/lib/data/teams";
 import { apiUrl } from "@/lib/basePath";
 import { useAppStore } from "@/lib/store";
+import ImpactIntro from "@/components/common/ImpactIntro";
 import {
   CATEGORY_LABEL,
   STANCE_LABEL,
@@ -105,13 +106,17 @@ export default function SourcesPage() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto space-y-6">
-      <header>
-        <h1 className="text-xl sm:text-2xl font-bold text-gradient">多源舆情采集</h1>
-        <p className="text-sm text-muted mt-1">
-          从小红书 / 微博 / 抖音等平台采集对球队的观点，作为预测的额外数据源。
-          按类别·倾向·权重加权后送入蒙特卡洛模拟。影响与加权分析见「舆情数据中心」。
-        </p>
-      </header>
+      <ImpactIntro
+        title="多源舆情采集"
+        subtitle="从小红书 / 微博 / 抖音等平台采集对球队的观点，作为预测的额外数据源。录入的每条观点都会实时参与冠军预测计算。"
+        steps={[
+          { icon: "📥", label: "① 采集观点", desc: "选平台/球队/倾向/权重录入" },
+          { icon: "⚖️", label: "② 加权折算", desc: "按类别·倾向·可信度计算" },
+          { icon: "🎲", label: "③ 注入模拟", desc: "修正球队战力进蒙特卡洛" },
+          { icon: "🏆", label: "④ 改变预测", desc: "夺冠概率与比分随之变化" },
+        ]}
+        resultLink={{ href: "/", label: "总览" }}
+      />
 
       <div className="grid lg:grid-cols-2 gap-6">
         {/* ── 录入表单 ─────────────────────────────── */}

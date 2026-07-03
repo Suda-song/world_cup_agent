@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { TEAMS } from "@/lib/data/teams";
 import { apiUrl } from "@/lib/basePath";
 import { useAppStore } from "@/lib/store";
+import ImpactIntro from "@/components/common/ImpactIntro";
 import { CATEGORY_LABEL, STANCE_LABEL, type Viewpoint } from "@/lib/viewpoints";
 
 interface SourceCfgRow { source: string; weight: number; enabled: boolean }
@@ -121,20 +122,25 @@ export default function DataPage() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-[1400px] mx-auto space-y-6">
-      <header className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gradient">舆情数据中心</h1>
-          <p className="text-sm text-muted mt-1">
-            多源观点采集后如何加权、如何影响冠军预测 —— 数据源 → 可信度 → 战力修正 → 预测 全链路可解释。
-          </p>
-        </div>
+      <ImpactIntro
+        title="舆情数据中心"
+        subtitle="多源观点采集后如何加权、如何影响冠军预测 —— 数据源 → 可信度 → 战力修正 → 预测，全链路可解释。调节下方各平台可信度权重会直接改变预测结果。"
+        steps={[
+          { icon: "🗂️", label: "① 汇总观点", desc: "全平台观点数据总览" },
+          { icon: "🎚️", label: "② 可信度加权", desc: "调平台权重(0-3)/开关" },
+          { icon: "📈", label: "③ 战力修正", desc: "实时算出各队修正系数" },
+          { icon: "🏆", label: "④ 影响预测", desc: "冠军概率随之变化" },
+        ]}
+        resultLink={{ href: "/predict", label: "晋级预测" }}
+      />
+      <div className="flex justify-end">
         <button
           onClick={exportViewpoints}
           className="px-4 py-2 rounded-xl bg-surface-2 border border-border text-sm hover:text-pitch-bright"
         >
           ⬇ 导出观点 CSV
         </button>
-      </header>
+      </div>
 
       {loading ? (
         <div className="text-sm text-muted py-16 text-center">加载中…</div>
