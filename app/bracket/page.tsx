@@ -291,7 +291,7 @@ export default function BracketPage() {
                     <div className="text-xs font-bold text-muted uppercase tracking-wider mb-2 text-center">
                       {STAGE_LABEL[stage]}
                     </div>
-                    <div className="flex flex-col flex-1 justify-center gap-2">
+                    <div className="flex flex-col gap-2">
                       {matches.map((m) => {
                         const isChamp = isChampionMatch(m);
                         const isSelected = selectedMatch?.matchId === m.matchId;
