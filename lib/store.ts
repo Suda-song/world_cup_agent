@@ -82,8 +82,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   loadViewpoints: async () => {
     try {
       const [vpRes, cfgRes] = await Promise.all([
-        fetch(apiUrl("/api/viewpoints")),
-        fetch(apiUrl("/api/source-config")),
+        fetch(apiUrl("/api/viewpoints"), { cache: "no-store" }),
+        fetch(apiUrl("/api/source-config"), { cache: "no-store" }),
       ]);
       const vpData = (await vpRes.json()) as { viewpoints?: Viewpoint[] };
       const cfgData = (await cfgRes.json()) as { config?: RawSourceConfig[] };

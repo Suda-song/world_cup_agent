@@ -81,7 +81,7 @@ export default function SourcesPage() {
   const load = async () => {
     setLoading(true);
     try {
-      const res = await fetch(apiUrl("/api/viewpoints"));
+      const res = await fetch(apiUrl("/api/viewpoints"), { cache: "no-store" });
       const data = (await res.json()) as { viewpoints?: Viewpoint[] };
       setViewpoints(data.viewpoints ?? []);
     } catch {

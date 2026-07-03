@@ -66,9 +66,9 @@ export default function DataPage() {
     (async () => {
       try {
         const [vp, pr, cfg] = await Promise.all([
-          fetch(apiUrl("/api/viewpoints")).then((r) => r.json()),
-          fetch(apiUrl("/api/predictions")).then((r) => r.json()),
-          fetch(apiUrl("/api/source-config")).then((r) => r.json()),
+          fetch(apiUrl("/api/viewpoints"), { cache: "no-store" }).then((r) => r.json()),
+          fetch(apiUrl("/api/predictions"), { cache: "no-store" }).then((r) => r.json()),
+          fetch(apiUrl("/api/source-config"), { cache: "no-store" }).then((r) => r.json()),
         ]);
         setViewpoints(vp.viewpoints ?? []);
         setPredictions(pr.recent ?? []);
