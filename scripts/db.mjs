@@ -59,6 +59,7 @@ CREATE TABLE IF NOT EXISTS wc_viewpoints (
   stance     ENUM('positive','neutral','negative') NOT NULL DEFAULT 'neutral',
   weight     TINYINT UNSIGNED NOT NULL DEFAULT 3,
   content    VARCHAR(500) NOT NULL,
+  link       VARCHAR(512) NULL,
   author     VARCHAR(64)  NULL,
   source     VARCHAR(32)  NOT NULL DEFAULT '其他',
   created_at TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,

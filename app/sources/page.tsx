@@ -49,6 +49,34 @@ export default function SourcesPage() {
   const [weight, setWeight] = useState(3);
   const [content, setContent] = useState("");
   const [source, setSource] = useState<string>("其他");
+  const [link, setLink] = useState("");
+  const [analyzing, setAnalyzing] = useState(false);
+  const [analyzed, setAnalyzed] = useState<{ stance: string; category: string; source: string } | null>(null);
+
+  // 舆情分析：调用 /api/sentiment 对观点文字分类，自动回填倾向/类别。
+  const analyze = async () => {
+    if (!content.trim()) {
+      setError("先填观点内容再做舆情分析");
+      return;
+    }
+    setAnalyzing(true);
+    setError("");
+    try {
+      const res = await fetch(apiUrl("/api/sentiment"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: content }),
+      });
+      const d = await res.json();
+      if (d.stance) setStance(d.stance);
+      if (d.category) setCategory(d.category);
+      setAnalyzed({ stance: d.stance, category: d.category, source: d.source });
+    } catch {
+      setError("舆情分析失败");
+    } finally {
+      setAnalyzing(false);
+    }
+  };
 
   const load = async () => {
     setLoading(true);
@@ -78,13 +106,15 @@ export default function SourcesPage() {
       const res = await fetch(apiUrl("/api/viewpoints"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ scope, teamId: scope === "team" ? teamId : null, category, stance, weight, content, source }),
+        body: JSON.stringify({ scope, teamId: scope === "team" ? teamId : null, category, stance, weight, content, source, link }),
       });
       const data = await res.json();
       if (!data.saved) {
         setError(data.reason === "db-not-configured" ? "数据库未配置，无法保存" : data.error || "保存失败");
       } else {
         setContent("");
+        setLink("");
+        setAnalyzed(null);
         await load();
         reloadStoreMods(); // 让模拟立即用上新观点
       }
@@ -223,16 +253,45 @@ export default function SourcesPage() {
             />
           </div>
 
-          {/* content */}
+          {/* content + 舆情分析 */}
           <div>
-            <label className="text-xs text-muted">观点内容</label>
+            <div className="flex items-center justify-between">
+              <label className="text-xs text-muted">观点内容</label>
+              <button
+                type="button"
+                onClick={analyze}
+                disabled={analyzing}
+                className="text-[11px] px-2 py-0.5 rounded-lg bg-gradient-to-r from-purple-500/30 to-indigo-500/30 border border-purple-500/30 text-purple-300 hover:brightness-110 disabled:opacity-50"
+              >
+                {analyzing ? "分析中…" : "🔎 舆情分析(自动判倾向/类别)"}
+              </button>
+            </div>
             <textarea
               value={content}
               onChange={(e) => setContent(e.target.value)}
               rows={3}
               maxLength={500}
-              placeholder="例如：核心中场停赛，控球组织能力大幅下降"
+              placeholder="粘贴小红书/微博笔记文字，例如：梅西状态火热，锋线串联流畅，看好阿根廷卫冕"
               className="w-full mt-1 bg-surface-2 border border-border rounded-xl px-3 py-2 text-sm resize-none"
+            />
+            {analyzed && (
+              <div className="mt-1 text-[11px] text-muted">
+                舆情分析（{analyzed.source === "qwen" ? "Qwen" : "本地"}）：倾向
+                <span className="text-pitch-bright"> {STANCE_LABEL[analyzed.stance as ViewpointStance] ?? analyzed.stance}</span>
+                · 类别 <span className="text-data-bright">{CATEGORY_LABEL[analyzed.category as ViewpointCategory] ?? analyzed.category}</span>
+                （已自动填好，可手动改）
+              </div>
+            )}
+          </div>
+
+          {/* link */}
+          <div>
+            <label className="text-xs text-muted">来源链接（可选，如小红书笔记 URL）</label>
+            <input
+              value={link}
+              onChange={(e) => setLink(e.target.value)}
+              placeholder="https://www.xiaohongshu.com/..."
+              className="w-full mt-1 bg-surface-2 border border-border rounded-xl px-3 py-2 text-sm"
             />
           </div>
 
@@ -259,36 +318,75 @@ export default function SourcesPage() {
           <div className="text-sm text-muted py-8 text-center">还没有观点，先在左侧添加一条。</div>
         ) : (
           <div className="space-y-2">
-            {viewpoints.map((v) => (
-              <div key={v.id} className="card-2 p-3 flex items-start gap-3">
-                <div className="flex flex-col gap-1 shrink-0">
-                  <span className={`text-[10px] px-1.5 py-0.5 rounded ${CAT_COLOR[v.category]}`}>
-                    {CATEGORY_LABEL[v.category]}
-                  </span>
-                  <span className={`text-[10px] ${STANCE_COLOR[v.stance]}`}>
-                    {STANCE_LABEL[v.stance]} · 权重{v.weight}
-                  </span>
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="text-xs text-muted mb-0.5 flex items-center gap-2 flex-wrap">
-                    <span>{v.scope === "general" ? "🌐 全局" : `${teamFlag(v.teamId)} ${teamName(v.teamId)}`}</span>
-                    {v.source && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-data/15 text-data-bright">
-                        {v.source}
-                      </span>
-                    )}
+            {viewpoints.map((v) => {
+              const isXHS = v.link && v.link.includes("xiaohongshu");
+              return isXHS ? (
+                // ── 小红书卡片 ────────────────────────────
+                <div key={v.id} className="rounded-2xl border border-[#ff2442]/30 bg-[#ff2442]/5 p-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      {/* 小红书图标 */}
+                      <div className="shrink-0 w-8 h-8 rounded-xl bg-[#ff2442] flex items-center justify-center text-white font-bold text-sm select-none">
+                        书
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-[11px] font-semibold text-[#ff6680]">📕 小红书笔记</div>
+                        <div className="text-[10px] text-muted flex items-center gap-1.5 flex-wrap">
+                          <span>{v.scope === "general" ? "🌐 全局" : `${teamFlag(v.teamId)} ${teamName(v.teamId)}`}</span>
+                          <span className={`${STANCE_COLOR[v.stance]}`}>{STANCE_LABEL[v.stance]}</span>
+                          <span className={`px-1 py-0.5 rounded text-[9px] ${CAT_COLOR[v.category]}`}>{CATEGORY_LABEL[v.category]}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <a
+                        href={v.link!}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[10px] px-2 py-0.5 rounded-lg bg-[#ff2442]/20 text-[#ff6680] hover:bg-[#ff2442]/30"
+                      >
+                        打开
+                      </a>
+                      <button onClick={() => remove(v.id)} className="text-muted hover:text-danger text-xs" aria-label="删除">✕</button>
+                    </div>
                   </div>
-                  <p className="text-sm text-foreground/90 break-words">{v.content}</p>
+                  <p className="text-sm text-foreground/85 mt-2 break-words">{v.content}</p>
                 </div>
-                <button
-                  onClick={() => remove(v.id)}
-                  className="shrink-0 text-muted hover:text-danger text-xs"
-                  aria-label="删除"
-                >
-                  ✕
-                </button>
-              </div>
-            ))}
+              ) : (
+                // ── 普通卡片 ─────────────────────────────
+                <div key={v.id} className="card-2 p-3 flex items-start gap-3">
+                  <div className="flex flex-col gap-1 shrink-0">
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded ${CAT_COLOR[v.category]}`}>
+                      {CATEGORY_LABEL[v.category]}
+                    </span>
+                    <span className={`text-[10px] ${STANCE_COLOR[v.stance]}`}>
+                      {STANCE_LABEL[v.stance]} · 权重{v.weight}
+                    </span>
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-xs text-muted mb-0.5 flex items-center gap-2 flex-wrap">
+                      <span>{v.scope === "general" ? "🌐 全局" : `${teamFlag(v.teamId)} ${teamName(v.teamId)}`}</span>
+                      {v.source && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-data/15 text-data-bright">
+                          {v.source}
+                        </span>
+                      )}
+                      {v.link && (
+                        <a href={v.link} target="_blank" rel="noopener noreferrer" className="text-[10px] text-data-bright hover:underline">🔗 原帖</a>
+                      )}
+                    </div>
+                    <p className="text-sm text-foreground/90 break-words">{v.content}</p>
+                  </div>
+                  <button
+                    onClick={() => remove(v.id)}
+                    className="shrink-0 text-muted hover:text-danger text-xs"
+                    aria-label="删除"
+                  >
+                    ✕
+                  </button>
+                </div>
+              );
+            })}
           </div>
         )}
         </div>

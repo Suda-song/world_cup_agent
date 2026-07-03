@@ -12,6 +12,7 @@ export interface Viewpoint {
   stance: ViewpointStance;
   weight: number; // 1-5
   content: string;
+  link?: string | null; // 原始帖子链接（如小红书/微博URL）
   author?: string | null;
   source?: string; // 来源平台：小红书/微博/抖音/知乎/Twitter/其他
   createdAt?: string;

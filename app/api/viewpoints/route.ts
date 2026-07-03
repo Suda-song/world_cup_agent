@@ -19,6 +19,7 @@ interface CreateBody {
   stance: ViewpointStance;
   weight: number;
   content: string;
+  link?: string;
   author?: string;
   source?: string;
 }
@@ -31,12 +32,12 @@ export async function GET(req: NextRequest) {
     const pool = getPool();
     const [rows] = teamId
       ? await pool.query<RowDataPacket[]>(
-          `SELECT id, scope, team_id AS teamId, category, stance, weight, content, author, source, created_at AS createdAt
+          `SELECT id, scope, team_id AS teamId, category, stance, weight, content, link, author, source, created_at AS createdAt
              FROM wc_viewpoints WHERE team_id = ? OR scope = 'general' ORDER BY created_at DESC`,
           [teamId]
         )
       : await pool.query<RowDataPacket[]>(
-          `SELECT id, scope, team_id AS teamId, category, stance, weight, content, author, source, created_at AS createdAt
+          `SELECT id, scope, team_id AS teamId, category, stance, weight, content, link, author, source, created_at AS createdAt
              FROM wc_viewpoints ORDER BY created_at DESC LIMIT 500`
         );
     return NextResponse.json({ viewpoints: rows });
@@ -67,6 +68,7 @@ export async function POST(req: NextRequest) {
   const content = (body.content || "").trim().slice(0, 500);
   const teamId = scope === "team" ? (body.teamId || "").trim() : null;
   const source = (body.source || "其他").slice(0, 32);
+  const link = (body.link || "").trim().slice(0, 512) || null;
 
   if (!category) return NextResponse.json({ error: "invalid-category" }, { status: 400 });
   if (!content) return NextResponse.json({ error: "empty-content" }, { status: 400 });
@@ -75,9 +77,9 @@ export async function POST(req: NextRequest) {
 
   try {
     const [res] = await getPool().execute<ResultSetHeader>(
-      `INSERT INTO wc_viewpoints (scope, team_id, category, stance, weight, content, author, source)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [scope, teamId, category, stance, weight, content, (body.author || "").slice(0, 64) || null, source]
+      `INSERT INTO wc_viewpoints (scope, team_id, category, stance, weight, content, link, author, source)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [scope, teamId, category, stance, weight, content, link, (body.author || "").slice(0, 64) || null, source]
     );
     return NextResponse.json({ saved: true, id: res.insertId });
   } catch (err) {
