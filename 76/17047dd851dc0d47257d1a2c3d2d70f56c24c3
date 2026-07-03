@@ -1,0 +1,50 @@
+lib/agent/report.ts
+  s_b2bb477cc3bc7f::t_d0f72e88373a92 80-84,97
+lib/types.ts
+  s_b2bb477cc3bc7f::t_9e4ab29d1ea5b0 118
+app/agent/page.tsx
+  s_b2bb477cc3bc7f::t_d41a382142d53c 413,418,429-436
+  s_b2bb477cc3bc7f::t_cfcb7194e679ff 45-49
+  s_b2bb477cc3bc7f::t_86c932c07dbac7 510
+  s_b2bb477cc3bc7f::t_50b38f5f1610fe 520-521
+  s_b2bb477cc3bc7f::t_26b3d349fd5e77 85
+app/bracket/page.tsx
+  s_b2bb477cc3bc7f::t_e0f1d78483d8f1 66
+  s_b2bb477cc3bc7f::t_e29354eef7941a 168
+  s_b2bb477cc3bc7f::t_7627690cbddc12 54,56,58-65,68-69
+  s_b2bb477cc3bc7f::t_29fbd294e9ae26 42-47,53,70-73
+  s_b2bb477cc3bc7f::t_78b7266566419f 50-51,55,57,67
+lib/agent/worldcupAgent.ts
+  s_b2bb477cc3bc7f::t_ffc990ac737f1a 266
+  s_b2bb477cc3bc7f::t_b8ca5aed351160 71
+  s_b2bb477cc3bc7f::t_501826565ec4ed 297-302,308-313
+lib/store.ts
+  s_b2bb477cc3bc7f::t_f9010562cd8db9 19,22-24
+  s_b2bb477cc3bc7f::t_52b5ab0bb4c503 144-145,147-148,168
+  s_b2bb477cc3bc7f::t_67162ecdc739a9 75
+  s_b2bb477cc3bc7f::t_13aef682c3f328 108,110-111
+  s_b2bb477cc3bc7f::t_d9d46980c776b3 179-180
+  s_b2bb477cc3bc7f::t_6578a271d545de 74,76-77,88
+  s_b2bb477cc3bc7f::t_fe34391bd20f22 68
+  s_b2bb477cc3bc7f::t_fa75d94e106987 109
+  s_b2bb477cc3bc7f::t_1ff3ff1ffda8ba 143,146,149-167,169
+  s_b2bb477cc3bc7f::t_08c5b944cc6a5c 3
+app/api/agent/chat/route.ts
+  s_b2bb477cc3bc7f::t_815c1a559ee53a 190-191
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.9",
+  "base_commit_sha": "7617047dd851dc0d47257d1a2c3d2d70f56c24c3",
+  "prompts": {},
+  "sessions": {
+    "s_b2bb477cc3bc7f": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "416cf002-30d1-48e9-b173-4e401d24d8ac",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "songdingan1 <songdingan1@xiaohongshu.com>"
+    }
+  }
+}
