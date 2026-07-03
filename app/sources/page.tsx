@@ -140,10 +140,10 @@ export default function SourcesPage() {
         title="多源舆情采集"
         subtitle="从小红书 / 微博 / 抖音等平台采集对球队的观点，作为预测的额外数据源。录入的每条观点都会实时参与冠军预测计算。"
         steps={[
-          { icon: "📥", label: "① 采集观点", desc: "选平台/球队/倾向/权重录入" },
-          { icon: "⚖️", label: "② 加权折算", desc: "按类别·倾向·可信度计算" },
-          { icon: "🎲", label: "③ 注入模拟", desc: "修正球队战力进蒙特卡洛" },
-          { icon: "🏆", label: "④ 改变预测", desc: "夺冠概率与比分随之变化" },
+          { label: "采集观点", desc: "选平台/球队/倾向/权重录入" },
+          { label: "加权折算", desc: "按类别·倾向·可信度计算" },
+          { label: "注入模拟", desc: "修正球队战力进蒙特卡洛" },
+          { label: "改变预测", desc: "夺冠概率与比分随之变化" },
         ]}
         resultLink={{ href: "/", label: "总览" }}
       />

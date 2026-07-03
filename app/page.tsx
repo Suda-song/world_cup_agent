@@ -46,7 +46,7 @@ export default function HomePage() {
             </span>
           </div>
           <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-            <span className="text-gradient">世界杯冠军预测系统</span>
+            <span className="shimmer-text">世界杯冠军预测系统</span>
           </h1>
           <p className="text-sm text-muted mt-2 max-w-2xl">
             基于 Elo 评分 + 泊松进球模型 + 蒙特卡洛模拟，整合完整赛程对阵、多维度图关系、战术对抗设计与球员心情分析，搭载 Qwen AI 赛事分析，预测各队从小组赛到夺冠的概率与比分。

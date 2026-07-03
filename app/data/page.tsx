@@ -126,10 +126,10 @@ export default function DataPage() {
         title="舆情数据中心"
         subtitle="多源观点采集后如何加权、如何影响冠军预测 —— 数据源 → 可信度 → 战力修正 → 预测，全链路可解释。调节下方各平台可信度权重会直接改变预测结果。"
         steps={[
-          { icon: "🗂️", label: "① 汇总观点", desc: "全平台观点数据总览" },
-          { icon: "🎚️", label: "② 可信度加权", desc: "调平台权重(0-3)/开关" },
-          { icon: "📈", label: "③ 战力修正", desc: "实时算出各队修正系数" },
-          { icon: "🏆", label: "④ 影响预测", desc: "冠军概率随之变化" },
+          { label: "汇总观点", desc: "全平台观点数据总览" },
+          { label: "可信度加权", desc: "调平台权重(0-3)/开关" },
+          { label: "战力修正", desc: "实时算出各队修正系数" },
+          { label: "影响预测", desc: "冠军概率随之变化" },
         ]}
         resultLink={{ href: "/predict", label: "晋级预测" }}
       />

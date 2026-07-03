@@ -4,7 +4,6 @@
 import Link from "next/link";
 
 interface Step {
-  icon: string;
   label: string;
   desc: string;
 }
@@ -37,19 +36,24 @@ export default function ImpactIntro({ title, subtitle, steps, resultLink }: Impa
         )}
       </div>
 
-      {/* Flow steps */}
-      <div className="flex flex-wrap items-start gap-2">
+      {/* Flow steps — consistent numbered chips (no ad-hoc emoji) */}
+      <div className="flex flex-wrap items-stretch gap-2">
         {steps.map((step, i) => (
           <div key={i} className="flex items-center gap-2">
-            <div className="flex items-start gap-2 card-2 px-3 py-2 min-w-[140px]">
-              <span className="text-base mt-0.5">{step.icon}</span>
+            <div className="flex items-center gap-2.5 card-2 px-3 py-2.5 min-w-[150px]">
+              <span
+                className="shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold text-white"
+                style={{ background: "linear-gradient(135deg, var(--pitch), var(--data))" }}
+              >
+                {i + 1}
+              </span>
               <div>
                 <div className="text-xs font-semibold">{step.label}</div>
                 <div className="text-[10px] text-muted">{step.desc}</div>
               </div>
             </div>
             {i < steps.length - 1 && (
-              <span className="text-data-bright text-sm font-bold">→</span>
+              <span className="text-muted-2 text-sm select-none" style={{ color: "var(--muted-2)" }}>→</span>
             )}
           </div>
         ))}

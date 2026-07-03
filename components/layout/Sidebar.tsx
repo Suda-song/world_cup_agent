@@ -42,9 +42,9 @@ function NavLinks({ onClose }: { onClose?: () => void }) {
     <nav className="flex-1 p-3 space-y-4 overflow-y-auto">
       {NAV_SECTIONS.map((section) => (
         <div key={section.title} className="space-y-1">
-          <div className="flex items-center justify-between px-3 mb-1">
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted/70">{section.title}</span>
-            <span className="text-[9px] px-1.5 py-0.5 rounded bg-surface-2 text-muted/60">{section.hint}</span>
+          <div className="flex items-center justify-between px-3 mb-1.5">
+            <span className="nav-section-label">{section.title}</span>
+            <span className="chip">{section.hint}</span>
           </div>
           {section.items.map((item) => {
             const active =
@@ -56,8 +56,8 @@ function NavLinks({ onClose }: { onClose?: () => void }) {
                 onClick={onClose}
                 className={`flex items-start gap-3 px-3 py-2.5 rounded-xl transition-all group ${
                   active
-                    ? "bg-pitch/15 text-pitch-bright glow-pitch"
-                    : "text-muted hover:bg-surface-2 hover:text-foreground"
+                    ? "nav-active"
+                    : "text-muted hover:bg-[rgba(255,255,255,0.04)] hover:text-foreground"
                 }`}
               >
                 <svg
