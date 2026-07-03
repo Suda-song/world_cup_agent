@@ -132,28 +132,52 @@ export async function POST(req: NextRequest) {
 
       try {
         // ──────────────────────────────────────────────
-        // 首次运行：分阶段推演 streaming
+        // 首次运行：Qwen 思考 → 分阶段工具调用 → Qwen 分析
         // ──────────────────────────────────────────────
         if (isFirstRun || messages.length === 0) {
 
-          // Step 1: 采集数据
-          send({ delta: "🔄 正在采集真实赛程数据（football-data.org）…\n" });
-          await new Promise((r) => setTimeout(r, 300));
+          // Step 0: Qwen 先输出思考/规划（流式）
+          send({ phase: "think" });
+          const thinkResult = await chatWithQwen([
+            {
+              role: "system",
+              content: `你是世界杯预测 AI Agent。用户请你预测世界杯冠军。
+请先用 2-3 句话说明你的分析思路和接下来要调用的工具（数据采集、蒙特卡洛模拟、比赛推演），语气像一个真正的 AI Agent 在规划任务。
+不要输出最终结论，只输出思考过程。`,
+            },
+            { role: "user", content: "请预测2026世界杯冠军" },
+          ], "正在规划分析任务…", { temperature: 0.7, maxTokens: 120 });
+          await streamText(send, thinkResult.content, 3, 15);
+          send({ delta: "\n\n" });
 
-          send({ delta: "⚙️  正在运行 Elo + 泊松 + 蒙特卡洛模拟（3,000 次）…\n" });
-          const agentResult = await runWorldCupAgent({ task: "预测世界杯冠军", simCount: 3000 });
+          // Step 1: 采集真实赛程数据
+          send({ phase: "fetch" });
           await new Promise((r) => setTimeout(r, 200));
+          send({ delta: "🌐 **调用工具：赛程数据采集**\n`football-data.org → 获取小组赛 + 淘汰赛赛程`\n\n" });
 
-          // Step 2: 分阶段推演文本
-          send({ delta: "\n" });
+          // Step 2: 执行蒙特卡洛模拟（真正跑计算）
+          send({ phase: "sim" });
+          const agentResult = await runWorldCupAgent({ task: "预测世界杯冠军", simCount: 3000 });
+          send({ delta: `⚙️ **调用工具：蒙特卡洛模拟引擎**\n\`已完成 3,000 次完整赛程模拟 · 锁定 ${agentResult.dataAudit.finishedMatchCount} 场真实赛果\`\n\n` });
+
+          // Step 3: 小组赛分析
+          send({ phase: "group" });
+          await new Promise((r) => setTimeout(r, 100));
+          send({ delta: "📊 **工具结果：小组赛阶段**\n" });
+          send({ delta: `已锁定真实赛果，各组前三晋级 32 强已确定\n\n` });
+
+          // Step 4: 淘汰赛推演
+          send({ phase: "ko" });
           const narrative = buildStageNarrative(agentResult);
-          await streamText(send, narrative, 6, 12);
+          await streamText(send, narrative, 5, 10);
 
-          // Step 3: Qwen AI 分析报告
+          // Step 5: Qwen 深度分析（流式）
+          send({ phase: "ai" });
           send({ delta: "\n---\n\n🤖 **Qwen AI 深度分析**\n\n" });
-          await streamText(send, agentResult.report, 5, 8);
+          await streamText(send, agentResult.report, 3, 8);
 
-          // Step 4: 完成，附带结构化 meta 给前端渲染卡片
+          send({ delta: "\n\n---\n💡 **你还可以深入探索：** 赛程对阵图查看每场比分、对抗设计分析两队博弈、图关系网络看球队间多维关联、心情分析了解球员状态对战力的影响。\n" });
+
           const meta = {
             topChampions: agentResult.topChampions.slice(0, 8),
             finalPrediction: agentResult.finalPrediction,

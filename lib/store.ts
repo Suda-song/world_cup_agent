@@ -52,6 +52,7 @@ export interface AgentChatMessage {
   role: "user" | "assistant";
   content: string;
   streaming?: boolean;
+  currentPhase?: string; // 首次推演时的当前阶段，用于驱动进度条
   meta?: {
     topChampions?: { teamId?: string; team: string; probability: number }[];
     finalPrediction?: { teamA: string; teamB: string; score: string; winner: string } | null;

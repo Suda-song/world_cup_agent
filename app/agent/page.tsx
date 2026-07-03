@@ -166,6 +166,81 @@ function ReasoningChain({ steps }: { steps: string[] }) {
   );
 }
 
+const EXPLORE_MODULES = [
+  {
+    href: "/bracket",
+    icon: "🏆",
+    title: "赛程对阵图",
+    desc: "完整赛程树 · 每场比分 · 真实与预测对比",
+    color: "border-amber-500/25 hover:border-amber-500/50 hover:bg-amber-500/5",
+    tag: "可视化",
+  },
+  {
+    href: "/predict",
+    icon: "📊",
+    title: "各阶段晋级预测",
+    desc: "48 队从小组赛到决赛的概率分布热力图",
+    color: "border-pitch/25 hover:border-pitch/50 hover:bg-pitch/5",
+    tag: "概率",
+  },
+  {
+    href: "/matchup",
+    icon: "⚔️",
+    title: "对抗设计",
+    desc: "任意两队交锋 · 泊松比分预测 · 战术克制分析",
+    color: "border-warn/25 hover:border-warn/50 hover:bg-warn/5",
+    tag: "对比",
+  },
+  {
+    href: "/relationships",
+    icon: "🕸",
+    title: "图关系网络",
+    desc: "实力 / 攻防 / 风格 / 历史多维度关系图谱",
+    color: "border-data/25 hover:border-data/50 hover:bg-data/5",
+    tag: "图谱",
+  },
+  {
+    href: "/mood",
+    icon: "🧠",
+    title: "球员心情分析",
+    desc: "情绪建模对球队战力的正负影响量化",
+    color: "border-violet/25 hover:border-violet/50 hover:bg-violet/5",
+    tag: "心理",
+  },
+  {
+    href: "/data",
+    icon: "📡",
+    title: "舆情数据中心",
+    desc: "多源舆情采集 · 可信度加权 · 影响预测因子",
+    color: "border-muted/20 hover:border-muted/40 hover:bg-surface-2",
+    tag: "数据",
+  },
+];
+
+function ExploreModules() {
+  return (
+    <div className="mt-4">
+      <div className="text-[10px] text-muted uppercase tracking-wider mb-2 px-1">🔍 深入探索</div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+        {EXPLORE_MODULES.map((m) => (
+          <Link
+            key={m.href}
+            href={m.href}
+            className={`rounded-xl border p-3 transition-all duration-200 group ${m.color}`}
+          >
+            <div className="flex items-start justify-between mb-1.5">
+              <span className="text-lg">{m.icon}</span>
+              <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-surface-2 text-muted">{m.tag}</span>
+            </div>
+            <div className="text-xs font-semibold text-foreground group-hover:text-foreground transition-colors">{m.title}</div>
+            <div className="text-[10px] text-muted mt-0.5 leading-relaxed">{m.desc}</div>
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ─── NAV 标记解析 ────────────────────────────────────
 // Qwen 可在回复末尾加 [NAV:/path:按钮文字] 触发跳转建议
 const NAV_RE = /\[NAV:([^:]+):([^\]]+)\]/g;
@@ -209,36 +284,41 @@ function NavButtons({ links }: { links: { path: string; label: string }[] }) {
   );
 }
 
-// ─── 进度指示器（首次推演时显示） ────────────────────
+// ─── 进度指示器（首次推演时显示，由 phase 事件驱动） ──
 const RUN_STAGES = [
-  { key: "fetch", label: "采集真实赛程", icon: "🌐" },
+  { key: "think", label: "规划任务",     icon: "💭" },
+  { key: "fetch", label: "采集赛程",     icon: "🌐" },
   { key: "sim",   label: "蒙特卡洛模拟", icon: "⚙️" },
   { key: "group", label: "小组赛分析",   icon: "📊" },
   { key: "ko",    label: "淘汰赛推演",   icon: "⚔️" },
   { key: "ai",    label: "AI 深度分析",  icon: "🤖" },
 ];
+const PHASE_ORDER = RUN_STAGES.map((s) => s.key);
 
-function RunProgress({ content }: { content: string }) {
-  const active = content.includes("蒙特卡洛") ? 1
-    : content.includes("小组赛") ? 2
-    : content.includes("32强") || content.includes("16强") ? 3
-    : content.includes("Qwen AI") || content.includes("深度分析") ? 4
-    : 0;
+function RunProgress({ currentPhase }: { currentPhase: string }) {
+  const activeIdx = PHASE_ORDER.indexOf(currentPhase);
   return (
     <div className="flex items-center gap-1 flex-wrap mb-3">
-      {RUN_STAGES.map((s, i) => (
-        <div key={s.key} className="flex items-center gap-1">
-          <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-medium transition-all duration-500 ${
-            i < active ? "bg-pitch/20 text-pitch-bright"
-            : i === active ? "bg-data/20 text-data-bright animate-pulse"
-            : "bg-surface-2 text-muted/50"
-          }`}>
-            <span>{s.icon}</span>
-            <span>{s.label}</span>
+      {RUN_STAGES.map((s, i) => {
+        const done = i < activeIdx;
+        const active = i === activeIdx;
+        return (
+          <div key={s.key} className="flex items-center gap-1">
+            <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-medium transition-all duration-500 ${
+              done   ? "bg-pitch/20 text-pitch-bright border border-pitch/20"
+              : active ? "bg-data/20 text-data-bright border border-data/30 shadow-[0_0_8px_rgba(14,165,233,0.3)]"
+              : "bg-surface-2 text-muted/40 border border-transparent"
+            }`}>
+              <span className={active ? "animate-spin-slow" : ""}>{s.icon}</span>
+              <span>{s.label}</span>
+              {done && <span className="text-pitch-bright">✓</span>}
+            </div>
+            {i < RUN_STAGES.length - 1 && (
+              <span className={`text-[10px] transition-colors duration-500 ${done ? "text-pitch/60" : "text-border"}`}>›</span>
+            )}
           </div>
-          {i < RUN_STAGES.length - 1 && <span className="text-border text-[10px]">›</span>}
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
@@ -272,7 +352,7 @@ export default function AgentPage() {
 
   const triggerChat = async (history: AgentChatMessage[], isFirstRun = false) => {
     setLoading(true);
-    const placeholder: AgentChatMessage = { role: "assistant", content: "", streaming: true };
+    const placeholder: AgentChatMessage = { role: "assistant", content: "", streaming: true, currentPhase: isFirstRun ? "think" : undefined };
     setMessages((prev) => [...prev, placeholder]);
 
     try {
@@ -288,6 +368,7 @@ export default function AgentPage() {
       const decoder = new TextDecoder();
       let fullContent = "";
       let meta: AgentChatMessage["meta"] = undefined;
+      let currentPhase: string | undefined = isFirstRun ? "think" : undefined;
 
       while (true) {
         const { done, value } = await reader.read();
@@ -297,11 +378,20 @@ export default function AgentPage() {
           if (!line.startsWith("data: ")) continue;
           try {
             const json = JSON.parse(line.slice(6));
+            if (json.phase) {
+              // 阶段切换事件：更新进度条，不影响文字内容
+              currentPhase = json.phase;
+              setMessages((prev) => {
+                const next = [...prev];
+                next[next.length - 1] = { ...next[next.length - 1], currentPhase };
+                return next;
+              });
+            }
             if (json.delta) {
               fullContent += json.delta;
               setMessages((prev) => {
                 const next = [...prev];
-                next[next.length - 1] = { role: "assistant", content: fullContent, streaming: true, meta };
+                next[next.length - 1] = { role: "assistant", content: fullContent, streaming: true, meta, currentPhase };
                 return next;
               });
             }
@@ -410,9 +500,9 @@ export default function AgentPage() {
             )}
 
             <div className={`${msg.role === "user" ? "max-w-[72%] order-first" : "max-w-[88%] w-full"}`}>
-              {/* 首次推演时显示进度指示器 */}
-              {msg.role === "assistant" && msg.streaming && isFirstMsg(idx) && (
-                <RunProgress content={msg.content} />
+              {/* 首次推演时显示阶段进度条（由 phase 事件驱动） */}
+              {msg.role === "assistant" && msg.streaming && isFirstMsg(idx) && msg.currentPhase && (
+                <RunProgress currentPhase={msg.currentPhase} />
               )}
 
               {/* 消息气泡 */}
@@ -456,14 +546,13 @@ export default function AgentPage() {
                   {msg.meta.reasoningChain && (msg.meta.reasoningChain as string[]).length > 0 && (
                     <ReasoningChain steps={msg.meta.reasoningChain as string[]} />
                   )}
+                  {/* 探索更多功能入口 */}
+                  <ExploreModules />
                   <div className="flex items-center justify-between px-1 mt-2">
                     <div className="text-[10px] text-muted">
                       {msg.meta.model && `${msg.meta.model} · `}
                       {msg.meta.reportSource === "qwen" ? "Qwen AI 生成" : "本地模板"}
                     </div>
-                    <Link href="/bracket" className="text-[10px] text-data hover:text-data-bright transition-colors">
-                      查看完整赛程对阵图 →
-                    </Link>
                   </div>
                 </div>
               )}

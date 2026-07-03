@@ -219,6 +219,8 @@ a, button { -webkit-tap-highlight-color: transparent; }
   50%       { opacity: 0.5; }
 }
 .animate-pulse-soft { animation: pulse-soft 2s ease-in-out infinite; }
+.animate-spin-slow  { animation: spin 2s linear infinite; }
+.animate-bounce-slow { animation: bounce 2.5s ease-in-out infinite; }
 
 @keyframes fade-up {
   from { opacity: 0; transform: translateY(12px); }
