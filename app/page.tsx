@@ -4,6 +4,8 @@ import { useEffect } from "react";
 import Link from "next/link";
 import { useAppStore } from "@/lib/store";
 import { getTeam, getHistory } from "@/lib/data/loader";
+import StageTimeline from "@/components/common/StageTimeline";
+import { currentFocusStage, formatDate } from "@/lib/schedule";
 
 export default function HomePage() {
   const { mcResult, running, runSimulation, loadViewpoints } = useAppStore();
@@ -36,9 +38,12 @@ export default function HomePage() {
       <div className="card p-6 md:p-8 mb-6 relative overflow-hidden">
         <div className="absolute -right-10 -top-10 text-[180px] opacity-5 select-none">🏆</div>
         <div className="relative">
-          <div className="flex items-center gap-2 text-xs text-muted mb-2">
+          <div className="flex items-center gap-2 text-xs text-muted mb-2 flex-wrap">
             <span className="px-2 py-0.5 rounded-full bg-pitch/15 text-pitch-bright">2026 美加墨世界杯</span>
             <span>48 队 · 12 组 · 新赛制</span>
+            <span className="px-2 py-0.5 rounded-full bg-warn/15 text-warn">
+              当前：{currentFocusStage().stage.labelFull}（{formatDate(currentFocusStage().stage.start)}–{formatDate(currentFocusStage().stage.end)}）· 已进入淘汰赛
+            </span>
           </div>
           <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
             <span className="text-gradient">世界杯冠军预测系统</span>
@@ -58,6 +63,10 @@ export default function HomePage() {
             </span>
           </div>
         </div>
+      </div>
+
+      <div className="mb-6">
+        <StageTimeline />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-6">

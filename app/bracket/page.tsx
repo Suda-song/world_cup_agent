@@ -6,6 +6,7 @@ import { computeMoodMods, useAppStore } from "@/lib/store";
 import MatchReasoningPanel from "@/components/bracket/MatchReasoning";
 import { getTeam } from "@/lib/data/loader";
 import { TEAMS } from "@/lib/data/teams";
+import StageTimeline from "@/components/common/StageTimeline";
 
 const STAGE_LABEL: Record<string, string> = {
   group: "小组赛",
@@ -99,6 +100,9 @@ export default function BracketPage() {
           </button>
         </div>
       </div>
+
+      {/* 赛程时间轴（当前阶段高亮） */}
+      <StageTimeline />
 
       {/* 冠军展示 */}
       <div className="rounded-2xl bg-gradient-to-r from-amber-500/10 via-pitch/10 to-transparent border border-amber-500/20 p-5 flex items-center gap-5">
