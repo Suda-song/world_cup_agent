@@ -2,10 +2,8 @@
 
 import { useState, useEffect } from "react";
 import {
-  simulateDetailedTournament,
   type DetailedSimResult,
   type MatchReasoning as MatchReason,
-  type KnownMatchResult,
 } from "@/lib/prediction/detailedSim";
 import type { TournamentStatus } from "@/app/api/live-results/route";
 import { computeMoodMods, useAppStore } from "@/lib/store";
@@ -40,50 +38,39 @@ export default function BracketPage() {
   const [useMood, setUseMood] = useState(true);
   const [simKey, setSimKey] = useState(0);
   const [selectedMatch, setSelectedMatch] = useState<MatchReason | null>(null);
-  const [result, setResult] = useState<DetailedSimResult | null>(null);
   const [liveError, setLiveError] = useState<string | null>(null);
-  const [tournamentStatus, setTournamentStatus] =
-    useState<TournamentStatus | null>(null);
+  const [tournamentStatus, setTournamentStatus] = useState<TournamentStatus | null>(null);
+
+  const detailedResult = useAppStore((s) => s.detailedResult);
+  const liveContext = useAppStore((s) => s.liveContext);
+  const liveContextLoaded = useAppStore((s) => s.liveContextLoaded);
+  const runDetailedSim = useAppStore((s) => s.runDetailedSim);
   const viewpointMods = useAppStore((s) => s.viewpointMods);
 
+  // 首次进入触发模拟；simKey > 0 时强制重跑（手动点重新模拟）
+  // store 内 runDetailedSim 保证幂等：有结果且非 force 时立即跳过
   useEffect(() => {
-    let cancelled = false;
-    const moodMods = useMood ? computeMoodMods() : {};
-    const mods: Record<string, number> = {};
-    for (const t of TEAMS) {
-      mods[t.id] = (moodMods[t.id] ?? 1) * (viewpointMods[t.id] ?? 1);
-    }
+    const force = simKey > 0;
+    runDetailedSim(force).then(() => {
+      // 拉取 tournamentStatus 用于展示（liveContext 已在 store 缓存时跳过 fetch）
+      const ctx = useAppStore.getState().liveContext;
+      if (!tournamentStatus && !ctx?.tournamentStatus) {
+        fetch(apiUrl("/api/live-results"))
+          .then((r) => r.json())
+          .then((data: { tournamentStatus?: TournamentStatus; error?: string; available?: boolean }) => {
+            if (data.tournamentStatus) setTournamentStatus(data.tournamentStatus);
+            if (!data.available && data.error) setLiveError(data.error);
+            else setLiveError(null);
+          })
+          .catch(() => {});
+      } else if (ctx?.tournamentStatus && !tournamentStatus) {
+        setTournamentStatus(ctx.tournamentStatus as TournamentStatus);
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [simKey]);
 
-    fetch(apiUrl("/api/live-results"))
-      .then((r) => r.json())
-      .then(
-        (data: {
-          available: boolean;
-          matches?: KnownMatchResult[];
-          groupMatches?: KnownMatchResult[];
-          tournamentStatus?: TournamentStatus;
-          error?: string;
-        }) => {
-          if (cancelled) return;
-          const knockoutMatches: KnownMatchResult[] = data.available ? (data.matches ?? []) : [];
-          const groupMatches: KnownMatchResult[] = data.available ? (data.groupMatches ?? []) : [];
-          if (!data.available && data.error) setLiveError(data.error);
-          else setLiveError(null);
-          if (data.tournamentStatus) setTournamentStatus(data.tournamentStatus);
-          setResult(simulateDetailedTournament(mods, knockoutMatches, groupMatches));
-          setSelectedMatch(null);
-        },
-      )
-      .catch(() => {
-        if (cancelled) return;
-        setResult(simulateDetailedTournament(mods, [], []));
-        setSelectedMatch(null);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [useMood, simKey, viewpointMods]);
+  const result = detailedResult;
 
   if (!result) {
     return (
@@ -178,7 +165,7 @@ export default function BracketPage() {
       <StageTimeline />
 
       {/* 冠军展示 */}
-      <div className="rounded-2xl bg-gradient-to-r from-amber-500/10 via-pitch/10 to-transparent border border-amber-500/20 p-5 flex items-center gap-5">
+      <div className="rounded-2xl bg-linear-to-r from-amber-500/10 via-pitch/10 to-transparent border border-amber-500/20 p-5 flex items-center gap-5">
         <div className="text-5xl">🏆</div>
         <div className="flex-1">
           <div className="text-xs text-amber-400 font-semibold uppercase tracking-wider">

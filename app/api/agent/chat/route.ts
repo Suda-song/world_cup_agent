@@ -187,6 +187,8 @@ export async function POST(req: NextRequest) {
             reportSource: agentResult.reportSource,
             model: agentResult.model,
             reasoningChain: agentResult.reasoningChain,
+            // 完整 detailedResult 供 bracket/predict 页面复用，避免重新模拟产生数据不一致
+            detailedResult: agentResult.detailedResult,
           };
 
           send({ done: true, meta });

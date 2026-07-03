@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { runMonteCarlo, type MonteCarloResult } from "./prediction/monteCarlo";
+import { simulateDetailedTournament, type DetailedSimResult } from "./prediction/detailedSim";
 import { teamMoodModifier } from "./mood/moodModel";
 import { TEAMS, TEAM_MAP } from "./data/teams";
 import { apiUrl } from "./basePath";
@@ -15,11 +16,12 @@ async function fetchLiveTournamentContext(): Promise<LiveTournamentContext | und
       available?: boolean;
       matches?: KnownMatchResult[];
       groupMatches?: KnownMatchResult[];
+      tournamentStatus?: unknown;
     };
-    if (!data.available) return undefined;
     return {
-      knockoutMatches: data.matches ?? [],
-      groupMatches: data.groupMatches ?? [],
+      knockoutMatches: data.available ? (data.matches ?? []) : [],
+      groupMatches: data.available ? (data.groupMatches ?? []) : [],
+      tournamentStatus: data.tournamentStatus,
     };
   } catch {
     return undefined;
@@ -63,11 +65,16 @@ export interface AgentChatMessage {
     reportSource?: string;
     source?: string;
     model?: string;
+    detailedResult?: DetailedSimResult;
   };
 }
 
 interface AppState {
   mcResult: MonteCarloResult | null;
+  detailedResult: DetailedSimResult | null;
+  detailedRunning: boolean;
+  liveContext: LiveTournamentContext | null;
+  liveContextLoaded: boolean;
   running: boolean;
   progress: { done: number; total: number };
   simCount: number;
@@ -78,6 +85,7 @@ interface AppState {
   agentMessages: AgentChatMessage[];
   agentInitialized: boolean;
   runSimulation: (n?: number) => void;
+  runDetailedSim: (force?: boolean) => Promise<void>;
   setSimCount: (n: number) => void;
   setUseMood: (v: boolean) => void;
   loadViewpoints: () => Promise<void>;
@@ -97,6 +105,10 @@ export function computeMoodMods(): Record<string, number> {
 
 export const useAppStore = create<AppState>((set, get) => ({
   mcResult: null,
+  detailedResult: null,
+  detailedRunning: false,
+  liveContext: null,
+  liveContextLoaded: false,
   running: false,
   progress: { done: 0, total: 0 },
   simCount: 3000,
@@ -128,6 +140,33 @@ export const useAppStore = create<AppState>((set, get) => ({
       savePrediction(result, count, get().useMood);
     }, 60);
   },
+  runDetailedSim: async (force = false) => {
+    // 已有结果且不强制重跑则跳过；正在跑时也跳过（防并发）
+    if ((get().detailedResult && !force) || get().detailedRunning) return;
+
+    set({ detailedRunning: true });
+
+    // 拉取 live context（有缓存则复用）
+    let ctx = get().liveContext;
+    if (!get().liveContextLoaded || force) {
+      ctx = await fetchLiveTournamentContext() ?? null;
+      set({ liveContext: ctx, liveContextLoaded: true });
+    }
+
+    const moodMods = get().useMood ? computeMoodMods() : {};
+    const vpMods = get().viewpointMods;
+    const mods: Record<string, number> = {};
+    for (const t of TEAMS) {
+      mods[t.id] = (moodMods[t.id] ?? 1) * (vpMods[t.id] ?? 1);
+    }
+
+    const result = simulateDetailedTournament(
+      mods,
+      ctx?.knockoutMatches ?? [],
+      ctx?.groupMatches ?? [],
+    );
+    set({ detailedResult: result, detailedRunning: false });
+  },
   setSimCount: (n) => set({ simCount: n }),
   setUseMood: (v) => set({ useMood: v }),
   setAgentMessages: (msgs) =>
@@ -137,6 +176,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   setAgentInitialized: (v) => set({ agentInitialized: v }),
   clearAgentChat: () => set({ agentMessages: [], agentInitialized: false }),
   setMcResult: (result) => set({ mcResult: result, running: false }),
+  // 同时暴露 setDetailedResult 供 agent 写入
+
   loadViewpoints: async () => {
     try {
       const [vpRes, cfgRes] = await Promise.all([

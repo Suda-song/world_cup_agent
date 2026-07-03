@@ -115,6 +115,7 @@ export interface KnownMatchResult {
 export interface LiveTournamentContext {
   knockoutMatches?: KnownMatchResult[];
   groupMatches?: KnownMatchResult[];
+  tournamentStatus?: unknown;
 }
 
 export interface TournamentResult {
