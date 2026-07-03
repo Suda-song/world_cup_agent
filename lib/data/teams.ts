@@ -74,6 +74,16 @@ export const TEAMS: Team[] = [
   { id: "aut", name: "奥地利", flag: "🇦🇹", elo: 1670, fifaRank: 22, group: "L", confederation: "UEFA", style: "press", ratings: { attack: 70, defense: 68, midfield: 68, speed: 68, experience: 64, form: 68 } },
   { id: "cpv", name: "佛得角", flag: "🇨🇻", elo: 1480, fifaRank: 70, group: "L", confederation: "CAF", style: "counter", ratings: { attack: 58, defense: 56, midfield: 56, speed: 62, experience: 54, form: 58 } },
   { id: "qat", name: "卡塔尔", flag: "🇶🇦", elo: 1420, fifaRank: 53, group: "L", confederation: "AFC", style: "possession", ratings: { attack: 54, defense: 54, midfield: 54, speed: 56, experience: 52, form: 54 } },
+
+  // ===== 实际参赛球队（种子数据未含，根据 API 真实数据补充）=====
+  { id: "rsa", name: "南非", flag: "🇿🇦", elo: 1480, fifaRank: 65, group: "A", confederation: "CAF", style: "counter", ratings: { attack: 56, defense: 58, midfield: 56, speed: 62, experience: 58, form: 58 } },
+  { id: "swe", name: "瑞典", flag: "🇸🇪", elo: 1680, fifaRank: 24, group: "X", confederation: "UEFA", style: "counter", ratings: { attack: 68, defense: 68, midfield: 66, speed: 68, experience: 66, form: 64 } },
+  { id: "cod", name: "刚果金", flag: "🇨🇩", elo: 1470, fifaRank: 60, group: "X", confederation: "CAF", style: "counter", ratings: { attack: 58, defense: 58, midfield: 56, speed: 66, experience: 56, form: 56 } },
+  { id: "bih", name: "波黑", flag: "🇧🇦", elo: 1500, fifaRank: 55, group: "B", confederation: "UEFA", style: "balanced", ratings: { attack: 60, defense: 58, midfield: 60, speed: 62, experience: 58, form: 56 } },
+  { id: "cze", name: "捷克", flag: "🇨🇿", elo: 1620, fifaRank: 35, group: "A", confederation: "UEFA", style: "balanced", ratings: { attack: 64, defense: 64, midfield: 66, speed: 64, experience: 66, form: 62 } },
+  { id: "hai", name: "海地", flag: "🇭🇹", elo: 1380, fifaRank: 85, group: "C", confederation: "CONCACAF", style: "counter", ratings: { attack: 50, defense: 50, midfield: 50, speed: 60, experience: 48, form: 50 } },
+  { id: "sco", name: "苏格兰", flag: "🏴󠁧󠁢󠁳󠁣󠁴󠁿", elo: 1600, fifaRank: 40, group: "C", confederation: "UEFA", style: "press", ratings: { attack: 62, defense: 62, midfield: 62, speed: 64, experience: 60, form: 62 } },
+  { id: "cuw", name: "库拉索", flag: "🏳️", elo: 1350, fifaRank: 90, group: "E", confederation: "CONCACAF", style: "counter", ratings: { attack: 48, defense: 50, midfield: 48, speed: 58, experience: 46, form: 48 } },
 ];
 
 export const TEAM_MAP: Record<string, Team> = Object.fromEntries(
