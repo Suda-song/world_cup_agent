@@ -63,7 +63,7 @@ Elo评分：${body.teamA} ${body.eloA} vs ${body.teamB} ${body.eloB}
     providers.push({
       source: "qwen",
       model: process.env.QWEN_MODEL || "qwen-plus",
-      url: "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
+      url: `${(process.env.QWEN_BASE_URL || "https://dashscope.aliyuncs.com/compatible-mode/v1").replace(/\/$/, "")}/chat/completions`,
       key: qwenKey,
     });
   }

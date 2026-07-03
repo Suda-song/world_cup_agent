@@ -52,8 +52,9 @@ export async function POST(req: NextRequest) {
 {"stance":"positive|neutral|negative","category":"tactics|form|history|opinion","summary":"20字以内中文摘要"}
 stance=对该球队是利好/中性/利空；category=战术打法(tactics)/球员状态伤病(form)/历史交锋(history)/舆论数据(opinion)。
 文字：${text}`;
+      const qwenBase = (process.env.QWEN_BASE_URL || "https://dashscope.aliyuncs.com/compatible-mode/v1").replace(/\/$/, "");
       const res = await fetch(
-        "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
+        `${qwenBase}/chat/completions`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${qwenKey}` },
