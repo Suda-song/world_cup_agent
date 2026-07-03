@@ -68,7 +68,7 @@ export async function GET() {
     const pool = getPool();
     const [recent] = await pool.query<RowDataPacket[]>(
       `SELECT id, champion_id, champion_name, probability, runner_up_name, sim_count, use_mood, created_at
-         FROM wc_predictions ORDER BY created_at DESC LIMIT 20`
+         FROM wc_predictions ORDER BY created_at DESC LIMIT 100`
     );
     const [leaderboard] = await pool.query<RowDataPacket[]>(
       `SELECT champion_id, champion_name, COUNT(*) AS wins, AVG(probability) AS avg_prob

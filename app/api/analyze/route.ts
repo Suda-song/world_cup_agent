@@ -55,25 +55,14 @@ Elo评分：${body.teamA} ${body.eloA} vs ${body.teamB} ${body.eloB}
 
 直接输出分析正文，不要加标题。`;
 
-  // Provider chain: MiniMax → Qwen → local fallback (all OpenAI-compatible chat).
-  const minimaxKey = process.env.MINIMAX_API_KEY;
+  // 全链路使用 Qwen 模型（通义千问，DashScope 兼容模式）。未配置 key 时用本地兜底。
   const qwenKey = process.env.QWEN_API_KEY || process.env.DASHSCOPE_API_KEY;
 
   const providers: { source: string; model: string; url: string; key?: string }[] = [];
-  if (minimaxKey) {
-    providers.push({
-      source: "minimax",
-      model: process.env.MINIMAX_MODEL || "MiniMax-Text-01",
-      url:
-        process.env.MINIMAX_BASE_URL ||
-        "https://api.minimaxi.com/v1/text/chatcompletion_v2",
-      key: minimaxKey,
-    });
-  }
   if (qwenKey) {
     providers.push({
       source: "qwen",
-      model: "qwen-turbo",
+      model: process.env.QWEN_MODEL || "qwen-plus",
       url: "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
       key: qwenKey,
     });

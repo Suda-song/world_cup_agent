@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { simulateDetailedTournament, type DetailedSimResult, type MatchReasoning as MatchReason } from "@/lib/prediction/detailedSim";
-import { computeMoodMods } from "@/lib/store";
+import { computeMoodMods, useAppStore } from "@/lib/store";
 import MatchReasoningPanel from "@/components/bracket/MatchReasoning";
 import { getTeam } from "@/lib/data/loader";
+import { TEAMS } from "@/lib/data/teams";
 
 const STAGE_LABEL: Record<string, string> = {
   group: "小组赛",
@@ -32,12 +33,18 @@ export default function BracketPage() {
   const [simKey, setSimKey] = useState(0);
   const [selectedMatch, setSelectedMatch] = useState<MatchReason | null>(null);
   const [result, setResult] = useState<DetailedSimResult | null>(null);
+  const viewpointMods = useAppStore((s) => s.viewpointMods);
 
   useEffect(() => {
     const moodMods = useMood ? computeMoodMods() : {};
-    setResult(simulateDetailedTournament(moodMods));
+    // 合并数据源观点修正
+    const mods: Record<string, number> = {};
+    for (const t of TEAMS) {
+      mods[t.id] = (moodMods[t.id] ?? 1) * (viewpointMods[t.id] ?? 1);
+    }
+    setResult(simulateDetailedTournament(mods));
     setSelectedMatch(null);
-  }, [useMood, simKey]);
+  }, [useMood, simKey, viewpointMods]);
 
   if (!result) {
     return (

@@ -49,6 +49,38 @@ CREATE TABLE IF NOT EXISTS wc_predictions (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='WorldCup 2026 prediction results';
 `;
 
+// 数据源配置中心：用户提交的观点（可影响模拟）
+const CREATE_VIEWPOINTS_SQL = `
+CREATE TABLE IF NOT EXISTS wc_viewpoints (
+  id         BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  scope      ENUM('team','general') NOT NULL DEFAULT 'team',
+  team_id    VARCHAR(16)  NULL,
+  category   ENUM('tactics','form','history','opinion') NOT NULL,
+  stance     ENUM('positive','neutral','negative') NOT NULL DEFAULT 'neutral',
+  weight     TINYINT UNSIGNED NOT NULL DEFAULT 3,
+  content    VARCHAR(500) NOT NULL,
+  author     VARCHAR(64)  NULL,
+  source     VARCHAR(32)  NOT NULL DEFAULT '其他',
+  created_at TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_team (team_id),
+  KEY idx_category (category),
+  KEY idx_source (source),
+  KEY idx_created (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='WorldCup viewpoints / data sources';
+`;
+
+// DBA-tunable per-source weights that scale each platform's influence on the sim.
+const CREATE_SOURCE_CONFIG_SQL = `
+CREATE TABLE IF NOT EXISTS wc_source_config (
+  source     VARCHAR(32)  NOT NULL,
+  weight     DECIMAL(4,2) NOT NULL DEFAULT 1.00,
+  enabled    TINYINT(1)   NOT NULL DEFAULT 1,
+  updated_at TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (source)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='DBA source-platform weights that influence prediction';
+`;
+
 async function main() {
   const cmd = process.argv[2] || "migrate";
   requireEnv();
@@ -56,7 +88,13 @@ async function main() {
   try {
     if (cmd === "migrate") {
       await conn.query(CREATE_SQL);
-      console.log("✅ Table wc_predictions is ready.");
+      await conn.query(CREATE_VIEWPOINTS_SQL);
+      await conn.query(CREATE_SOURCE_CONFIG_SQL);
+      const defs = ["小红书", "微博", "抖音", "知乎", "Twitter/X", "其他"];
+      for (const s of defs) {
+        await conn.query("INSERT IGNORE INTO wc_source_config (source,weight,enabled) VALUES (?,1.00,1)", [s]);
+      }
+      console.log("✅ Tables wc_predictions, wc_viewpoints & wc_source_config are ready.");
     } else if (cmd === "ping") {
       const [rows] = await conn.query("SELECT 1 AS ok");
       console.log("✅ Connected:", rows);

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
+import { useAppStore } from "@/lib/store";
 
 const NAV = [
   { href: "/", label: "总览仪表盘", icon: "M3 12l9-9 9 9M5 10v10h14V10", desc: "夺冠概率与关键指标" },
@@ -11,6 +12,8 @@ const NAV = [
   { href: "/relationships", label: "图关系", icon: "M12 2a10 10 0 100 20 10 10 0 000-20M2 12h20M12 2a15 15 0 010 20", desc: "多维度球队关系网络" },
   { href: "/matchup", label: "对抗设计", icon: "M12 3v18M5 8l7-5 7 5M5 16l7 5 7-5", desc: "两两对战与战术克制" },
   { href: "/mood", label: "心情分析", icon: "M9 11l3 3 8-8M21 12a9 9 0 11-6-8.5", desc: "球员情绪建模与演化" },
+  { href: "/sources", label: "多源舆情采集", icon: "M4 7c0-1.7 3.6-3 8-3s8 1.3 8 3-3.6 3-8 3-8-1.3-8-3M4 7v10c0 1.7 3.6 3 8 3s8-1.3 8-3V7M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3", desc: "采集观点数据源" },
+  { href: "/data", label: "舆情数据中心", icon: "M3 3v18h18M7 15l3-4 3 2 4-6", desc: "可信度加权 · 影响分析" },
 ];
 
 function NavLinks({ onClose }: { onClose?: () => void }) {
@@ -78,7 +81,7 @@ function SidebarFooter() {
     <div className="p-4 border-t border-border text-[10px] text-muted">
       <div className="flex items-center gap-1.5">
         <span className="w-1.5 h-1.5 rounded-full bg-pitch-bright animate-pulse-soft" />
-        引擎在线 · Elo+泊松+蒙特卡洛
+        引擎在线 · Elo+泊松+蒙特卡洛+Qwen
       </div>
     </div>
   );
@@ -87,6 +90,12 @@ function SidebarFooter() {
 export default function Sidebar() {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
+  const loadViewpoints = useAppStore((s) => s.loadViewpoints);
+
+  // Load user viewpoints once so they factor into simulations from any entry page.
+  useEffect(() => {
+    loadViewpoints();
+  }, [loadViewpoints]);
 
   // Close drawer on route change
   useEffect(() => {

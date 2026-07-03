@@ -49,10 +49,11 @@ $SSH_CMD "${SERVER_USER}@${SERVER_HOST}" "NGINX_CONF='${NGINX_CONF:-}' bash -s" 
 set -euo pipefail
 
 if [ -z "${NGINX_CONF:-}" ]; then
-  NGINX_CONF=$(grep -rl 'bianlianfangjiwen.top' /etc/nginx/sites-enabled/ /etc/nginx/conf.d/ /etc/nginx/sites-available/ 2>/dev/null | head -1 || true)
+  # Exclude backup files (*.bak*) so we never edit a stale backup.
+  NGINX_CONF=$(grep -rl --exclude='*.bak*' 'bianlianfangjiwen.top' /etc/nginx/sites-enabled/ /etc/nginx/conf.d/ /etc/nginx/sites-available/ 2>/dev/null | head -1 || true)
 fi
 if [ -z "$NGINX_CONF" ]; then
-  NGINX_CONF=$(ls /etc/nginx/sites-enabled/* 2>/dev/null | head -1 || ls /etc/nginx/conf.d/*.conf 2>/dev/null | head -1 || true)
+  NGINX_CONF=$(ls /etc/nginx/sites-enabled/*.conf 2>/dev/null | head -1 || ls /etc/nginx/conf.d/*.conf 2>/dev/null | head -1 || true)
 fi
 if [ -z "$NGINX_CONF" ] || [ ! -f "$NGINX_CONF" ]; then
   echo "⚠ Could not locate the nginx config for bianlianfangjiwen.top."

@@ -6,10 +6,13 @@ import { useAppStore } from "@/lib/store";
 import { getTeam, getHistory } from "@/lib/data/loader";
 
 export default function HomePage() {
-  const { mcResult, running, runSimulation } = useAppStore();
+  const { mcResult, running, runSimulation, loadViewpoints } = useAppStore();
 
   useEffect(() => {
-    if (!mcResult && !running) runSimulation(3000);
+    if (!mcResult && !running) {
+      // Load user viewpoints first so they factor into the simulation.
+      loadViewpoints().finally(() => runSimulation(3000));
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

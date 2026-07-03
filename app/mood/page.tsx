@@ -18,6 +18,7 @@ import {
 } from "recharts";
 import PageHeader from "@/components/common/PageHeader";
 import MoodMeter from "@/components/mood/MoodMeter";
+import PlayerAvatar from "@/components/common/PlayerAvatar";
 import { TEAMS } from "@/lib/data/teams";
 import { getTeam, getPlayersOf } from "@/lib/data/loader";
 import {
@@ -174,16 +175,19 @@ export default function MoodPage() {
                   }`}
                 >
                   <div className="flex items-start justify-between mb-3">
-                    <div>
-                      <div className="font-semibold text-sm flex items-center gap-1">
-                        {p.isStar && <span className="text-gold">★</span>}
-                        {p.name}
-                      </div>
-                      <div className="text-[10px] text-muted">
-                        {posLabel(p.position)} · 能力 {p.overall}
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <PlayerAvatar name={p.name} isStar={p.isStar} size={44} />
+                      <div className="min-w-0">
+                        <div className="font-semibold text-sm flex items-center gap-1">
+                          {p.isStar && <span className="text-gold">★</span>}
+                          <span className="truncate">{p.name}</span>
+                        </div>
+                        <div className="text-[10px] text-muted">
+                          {posLabel(p.position)} · 能力 {p.overall}
+                        </div>
                       </div>
                     </div>
-                    <div className="text-right">
+                    <div className="text-right shrink-0">
                       <div
                         className="text-lg font-bold"
                         style={{ color: pl.color }}
