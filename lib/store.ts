@@ -53,9 +53,13 @@ export interface AgentChatMessage {
   content: string;
   streaming?: boolean;
   meta?: {
-    topChampions?: { team: string; probability: number }[];
+    topChampions?: { teamId?: string; team: string; probability: number }[];
     finalPrediction?: { teamA: string; teamB: string; score: string; winner: string } | null;
     darkHorses?: { team: string; probability: number; fifaRank: number }[];
+    championPath?: { stage: string; match: string; winner: string; state: string }[];
+    reasoningChain?: string[];
+    dataAudit?: { scheduleSource: string; finishedMatchCount: number };
+    reportSource?: string;
     source?: string;
     model?: string;
   };
@@ -79,6 +83,8 @@ interface AppState {
   setAgentMessages: (msgs: AgentChatMessage[] | ((prev: AgentChatMessage[]) => AgentChatMessage[])) => void;
   setAgentInitialized: (v: boolean) => void;
   clearAgentChat: () => void;
+  // Agent 跑完后回写 mcResult，其他页面直接消费，不再重复模拟
+  setMcResult: (result: MonteCarloResult) => void;
 }
 
 // 计算各队心情修正系数
@@ -129,6 +135,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     })),
   setAgentInitialized: (v) => set({ agentInitialized: v }),
   clearAgentChat: () => set({ agentMessages: [], agentInitialized: false }),
+  setMcResult: (result) => set({ mcResult: result, running: false }),
   loadViewpoints: async () => {
     try {
       const [vpRes, cfgRes] = await Promise.all([

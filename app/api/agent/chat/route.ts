@@ -171,32 +171,84 @@ export async function POST(req: NextRequest) {
         }
 
         // ──────────────────────────────────────────────
-        // 多轮对话：带上下文调用 Qwen
+        // 多轮对话：带结构化数据快照调用 Qwen
         // ──────────────────────────────────────────────
         const userMessage = messages[messages.length - 1]?.content ?? "";
         const history = messages.slice(0, -1);
 
-        // 把首条 assistant 消息（含完整推演报告）作为系统背景
-        const firstAssistant = history.find((m) => m.role === "assistant");
-        const systemPrompt = firstAssistant
-          ? `你是专业的世界杯预测分析助手。用户已完整看过初始预测报告（含赛程推演、比分预测、夺冠概率），现在进行追问。
-请基于已有报告内容回答，保持专业、简洁、有洞察力，不要重复整段报告，聚焦用户问题给出精准回答。
-如用户问具体球队，结合 Elo 评分、历史数据和模拟概率作答。`
-          : `你是专业的世界杯预测分析助手，请用中文回答用户关于2026世界杯的问题。`;
+        // 从历史消息里找到首条带 meta 的 assistant 消息，提取结构化数据快照
+        type MsgWithMeta = ChatMessage & { meta?: Record<string, unknown> };
+        const firstWithMeta = (history as MsgWithMeta[]).find(
+          (m) => m.role === "assistant" && m.meta,
+        );
+        const snapshot = firstWithMeta?.meta ?? null;
+
+        // 构建包含实际预测数据的系统 prompt
+        let systemPrompt: string;
+
+        // 可跳转页面工具定义
+        const NAV_TOOLS = `
+## 导航工具（页面跳转建议）
+当你的回答涉及以下场景时，在回复末尾追加对应标记（可多个），前端会渲染成可点击按钮：
+- 用户问比赛结果、赛程、对阵情况 → [NAV:/bracket:查看完整赛程对阵图]
+- 用户问夺冠概率、晋级概率、各阶段预测 → [NAV:/predict:查看晋级概率详情]
+- 用户问总体概况、冠军分布 → [NAV:/dashboard:打开总览仪表盘]
+- 用户问球队对比、两队交锋 → [NAV:/matchup:查看对抗分析]
+- 用户问球员状态、士气影响 → [NAV:/mood:查看球员心情分析]
+- 用户问数据来源、舆情 → [NAV:/data:查看舆情数据]
+注意：标记放在正文最后一行，格式严格为 [NAV:路径:按钮文字]，不要解释标记本身。`;
+
+        if (snapshot) {
+          const top = (snapshot.topChampions as { team: string; probability: number }[] | undefined)
+            ?.slice(0, 5)
+            .map((c, i) => `${i + 1}. ${c.team} ${(c.probability * 100).toFixed(1)}%`)
+            .join("、") ?? "未知";
+          const final = snapshot.finalPrediction as { teamA: string; teamB: string; score: string; winner: string } | null;
+          const path = (snapshot.championPath as { stage: string; match: string; winner: string }[] | undefined)
+            ?.map((p) => `${p.stage}: ${p.match} → ${p.winner}`)
+            .join("；") ?? "";
+          const dark = (snapshot.darkHorses as { team: string; probability: number; fifaRank: number }[] | undefined)
+            ?.slice(0, 3)
+            .map((d) => `${d.team}(FIFA #${d.fifaRank}, ${(d.probability * 100).toFixed(1)}%)`)
+            .join("、") ?? "";
+
+          systemPrompt = `你是世界杯冠军预测 AI Agent，具备专业赛事分析能力。以下是本次基于真实赛程数据的预测结构化快照：
+
+【夺冠概率 Top5】${top}
+【决赛预测】${final ? `${final.teamA} ${final.score} ${final.teamB}，冠军：${final.winner}` : "未定"}
+【冠军路径】${path}
+【黑马候选】${dark}
+【数据来源】football-data.org 真实赛程 + Elo+泊松+蒙特卡洛模拟
+
+回答规则：
+- 基于以上真实数据作答，数据和结论必须一致
+- 回答要专业、有洞察力，加入你对局势的判断
+- 适度使用 **加粗** 强调关键信息
+- 回答简洁有力，聚焦用户问题，不要重复完整报告
+- 如用户问某支球队，结合其 Elo 评分、历史表现和模拟概率深度分析
+
+${NAV_TOOLS}`;
+        } else {
+          systemPrompt = `你是世界杯冠军预测 AI Agent，请用中文专业回答用户关于 2026 FIFA 世界杯的问题。回答要有洞察力，适度使用 **加粗** 强调重点。\n${NAV_TOOLS}`;
+        }
 
         const qwenMessages: { role: "system" | "user" | "assistant"; content: string }[] = [
           { role: "system", content: systemPrompt },
-          ...history.map((m) => ({ role: m.role as "user" | "assistant", content: m.content })),
+          // 只保留文字对话历史（不含 meta），避免超出 token 限制
+          ...history.slice(-8).map((m) => ({
+            role: m.role as "user" | "assistant",
+            content: m.content.slice(0, 1200), // 截断超长的首条推演文本
+          })),
           { role: "user", content: userMessage },
         ];
 
         const result = await chatWithQwen(
           qwenMessages,
           "抱歉，我暂时无法回答这个问题，请稍后再试。",
-          { temperature: 0.5, maxTokens: 800 },
+          { temperature: 0.6, maxTokens: 1000 },
         );
 
-        await streamText(send, result.content, 5, 10);
+        await streamText(send, result.content, 3, 8);
         send({ done: true, meta: { source: result.source, model: result.model } });
 
       } catch (err) {

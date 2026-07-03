@@ -6,6 +6,14 @@ import { usePathname } from "next/navigation";
 import { apiUrl } from "@/lib/basePath";
 import { useAppStore, type AgentChatMessage } from "@/lib/store";
 
+// 解析 Qwen 插入的 [NAV:/path:label] 跳转标记
+const NAV_RE = /\[NAV:([^:]+):([^\]]+)\]/g;
+function parseNav(content: string) {
+  const links: { path: string; label: string }[] = [];
+  const clean = content.replace(NAV_RE, (_, p, l) => { links.push({ path: p.trim(), label: l.trim() }); return ""; }).trimEnd();
+  return { clean, links };
+}
+
 const QUICK_TASKS = ["为什么这支队最有可能夺冠？", "本届最大黑马是谁？", "决赛预测是什么？"];
 
 export default function FloatingAgent() {
@@ -137,18 +145,34 @@ export default function FloatingAgent() {
             ) : (
               messages.map((msg, idx) => (
                 <div key={idx} className={msg.role === "user" ? "text-right" : "text-left"}>
-                  <div
-                    className={`inline-block max-w-[92%] rounded-2xl px-3 py-2 text-xs leading-relaxed whitespace-pre-line ${
-                      msg.role === "user"
-                        ? "bg-pitch/20 border border-pitch/30 text-foreground"
-                        : "bg-surface-2 text-foreground"
-                    }`}
-                  >
-                    {msg.content}
-                    {msg.streaming && (
-                      <span className="inline-block w-0.5 h-3 bg-pitch-bright ml-0.5 animate-pulse align-middle" />
-                    )}
-                  </div>
+                  {(() => {
+                    const { clean, links } = msg.role === "assistant" && !msg.streaming
+                      ? parseNav(msg.content) : { clean: msg.content, links: [] };
+                    return (
+                      <div
+                        className={`inline-block max-w-[92%] rounded-2xl px-3 py-2 text-xs leading-relaxed whitespace-pre-line ${
+                          msg.role === "user"
+                            ? "bg-pitch/20 border border-pitch/30 text-foreground"
+                            : "bg-surface-2 text-foreground"
+                        }`}
+                      >
+                        {clean}
+                        {msg.streaming && (
+                          <span className="inline-block w-0.5 h-3 bg-pitch-bright ml-0.5 animate-pulse align-middle" />
+                        )}
+                        {links.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5 mt-2 pt-2 border-t border-white/10">
+                            {links.map((l) => (
+                              <Link key={l.path} href={l.path}
+                                className="text-[10px] px-2 py-0.5 rounded-full bg-data/15 border border-data/30 text-data-bright hover:bg-data/25 transition-all">
+                                → {l.label}
+                              </Link>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
                   {/* 显示首条回复的夺冠 Top3 */}
                   {msg.role === "assistant" && !msg.streaming && msg.meta?.topChampions && (
                     <div className="mt-1.5 inline-block max-w-[92%] rounded-xl border border-border bg-surface/60 px-3 py-2 text-left">

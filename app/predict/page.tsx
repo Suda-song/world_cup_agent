@@ -9,11 +9,11 @@ import ProbabilityHeatmap from "@/components/predict/ProbabilityHeatmap";
 import { useAppStore } from "@/lib/store";
 
 export default function PredictPage() {
-  const { mcResult, runSimulation, running } = useAppStore();
+  const { mcResult, runSimulation, running, agentInitialized } = useAppStore();
 
-  // 首次进入自动跑一次默认模拟
+  // Agent 已跑过预测则直接使用其结果，不重复模拟
   useEffect(() => {
-    if (!mcResult && !running) runSimulation(3000);
+    if (!mcResult && !running && !agentInitialized) runSimulation(3000);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

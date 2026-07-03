@@ -296,16 +296,20 @@ export async function runWorldCupAgent(
     [
       {
         role: "system",
-        content:
-          "你是世界杯预测分析 Agent。请基于结构化数据输出中文报告，必须说明数据来源、模型链路、冠军热门、黑马、决赛预测和关键不确定性。不要编造输入中没有的数据。",
+        content: `你是世界杯冠军预测 AI Agent，具备顶级赛事分析能力。基于结构化预测数据输出深度分析报告，要求：
+1. **数据驱动**：所有结论必须源自输入数据，不编造
+2. **层次清晰**：分"热门分析 → 黑马揭秘 → 决赛预测 → 不确定性"四段
+3. **专业洞察**：加入 Elo 差值、泊松期望进球等量化依据
+4. **可读性强**：使用 **加粗** 强调关键数据，语气自信有力
+5. **字数控制**：600 字以内，每段不超过 3 句`,
       },
       {
         role: "user",
-        content: `用户任务：${task}\n\n结构化预测结果：\n${qwenPayload}\n\n请输出 500 字以内的分析报告，结论明确，推理可解释。`,
+        content: `任务：${task}\n\n预测数据：\n${qwenPayload}`,
       },
     ],
     fallback,
-    { temperature: 0.35, maxTokens: 1000 },
+    { temperature: 0.4, maxTokens: 1200 },
   );
 
   return buildResponseShape(

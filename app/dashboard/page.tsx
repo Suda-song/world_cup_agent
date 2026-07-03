@@ -8,10 +8,11 @@ import StageTimeline from "@/components/common/StageTimeline";
 import { currentFocusStage, formatDate } from "@/lib/schedule";
 
 export default function DashboardPage() {
-  const { mcResult, running, runSimulation, loadViewpoints } = useAppStore();
+  const { mcResult, running, runSimulation, loadViewpoints, agentInitialized } = useAppStore();
 
   useEffect(() => {
-    if (!mcResult && !running) {
+    // Agent 已跑过预测则直接使用其结果，不重复模拟
+    if (!mcResult && !running && !agentInitialized) {
       loadViewpoints().finally(() => runSimulation(3000));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
