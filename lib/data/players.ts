@@ -122,15 +122,15 @@ export const PLAYERS: Player[] = [
   p("bel", "L. Openda", "FW", 84),
   p("bel", "R. Lukaku", "FW", 84, { pressure: 74 }),
 
-  // 意大利
-  p("ita", "G. Donnarumma", "GK", 88, { confidence: 85 }, true),
-  p("ita", "A. Bastoni", "DF", 87, { confidence: 84 }),
-  p("ita", "G. Dimarco", "DF", 84),
-  p("ita", "N. Barella", "MF", 88, { confidence: 85, motivation: 86 }, true),
-  p("ita", "S. Tonali", "MF", 85),
-  p("ita", "D. Frattesi", "MF", 83),
-  p("ita", "F. Chiesa", "FW", 84, { fatigue: 54 }),
-  p("ita", "M. Retegui", "FW", 82),
+  // 土耳其
+  p("tur", "U. Çakır", "GK", 82, { confidence: 78 }),
+  p("tur", "M. Demiral", "DF", 82, { confidence: 80 }),
+  p("tur", "S. Ayhan", "DF", 79),
+  p("tur", "H. Çalhanoğlu", "MF", 86, { confidence: 84, motivation: 86 }, true),
+  p("tur", "İ. Kökçü", "MF", 83),
+  p("tur", "A. Güler", "MF", 84, { confidence: 82 }, true),
+  p("tur", "K. Aktürkoğlu", "FW", 81, { fatigue: 54 }),
+  p("tur", "B. Yılmaz", "FW", 80),
 
   // 克罗地亚
   p("cro", "D. Livaković", "GK", 85, { confidence: 82 }, true),

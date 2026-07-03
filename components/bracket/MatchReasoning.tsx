@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { getTeam } from "@/lib/data/loader";
+import { apiUrl } from "@/lib/basePath";
 
 interface ReasoningData {
   matchId: string;
@@ -73,7 +74,7 @@ export default function MatchReasoning({
     setAiLoading(true);
     setAiAnalysis("");
     try {
-      const res = await fetch("/api/analyze", {
+      const res = await fetch(apiUrl("/api/analyze"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -240,7 +241,7 @@ export default function MatchReasoning({
             disabled={aiLoading}
             className="text-xs px-3 py-1 rounded-lg bg-gradient-to-r from-purple-500/30 to-indigo-500/30 border border-purple-500/30 text-purple-300 hover:from-purple-500/40 hover:to-indigo-500/40 transition-all disabled:opacity-50"
           >
-            {aiLoading ? "分析中..." : aiAnalysis ? "重新分析" : "🤖 Qwen 分析"}
+            {aiLoading ? "分析中..." : aiAnalysis ? "重新分析" : "🤖 AI 分析"}
           </button>
         </div>
         {aiAnalysis && (
@@ -249,6 +250,10 @@ export default function MatchReasoning({
               {aiSource === "qwen" ? (
                 <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300">
                   Qwen-Turbo
+                </span>
+              ) : aiSource === "minimax" ? (
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300">
+                  MiniMax
                 </span>
               ) : (
                 <span className="text-[10px] px-1.5 py-0.5 rounded bg-surface-2 text-muted">

@@ -55,27 +55,41 @@ Elo评分：${body.teamA} ${body.eloA} vs ${body.teamB} ${body.eloB}
 
 直接输出分析正文，不要加标题。`;
 
-  const apiKey = process.env.QWEN_API_KEY || process.env.DASHSCOPE_API_KEY;
+  // Provider chain: MiniMax → Qwen → local fallback (all OpenAI-compatible chat).
+  const minimaxKey = process.env.MINIMAX_API_KEY;
+  const qwenKey = process.env.QWEN_API_KEY || process.env.DASHSCOPE_API_KEY;
 
-  // 无 API Key 时使用本地生成的分析（离线兜底）
-  if (!apiKey) {
-    return NextResponse.json({
-      source: "local",
-      analysis: generateLocalAnalysis(body, stageLabel),
+  const providers: { source: string; model: string; url: string; key?: string }[] = [];
+  if (minimaxKey) {
+    providers.push({
+      source: "minimax",
+      model: process.env.MINIMAX_MODEL || "MiniMax-Text-01",
+      url:
+        process.env.MINIMAX_BASE_URL ||
+        "https://api.minimaxi.com/v1/text/chatcompletion_v2",
+      key: minimaxKey,
+    });
+  }
+  if (qwenKey) {
+    providers.push({
+      source: "qwen",
+      model: "qwen-turbo",
+      url: "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
+      key: qwenKey,
     });
   }
 
-  try {
-    const response = await fetch(
-      "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
-      {
+  let lastError = "";
+  for (const p of providers) {
+    try {
+      const response = await fetch(p.url, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
+          Authorization: `Bearer ${p.key}`,
         },
         body: JSON.stringify({
-          model: "qwen-turbo",
+          model: p.model,
           messages: [
             {
               role: "system",
@@ -87,28 +101,29 @@ Elo评分：${body.teamA} ${body.eloA} vs ${body.teamB} ${body.eloB}
           temperature: 0.7,
           max_tokens: 300,
         }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`${p.source} API error: ${response.status}`);
       }
-    );
 
-    if (!response.ok) {
-      throw new Error(`Qwen API error: ${response.status}`);
+      const data = await response.json();
+      const analysis = data.choices?.[0]?.message?.content || "";
+      if (!analysis) throw new Error(`${p.source} empty response`);
+
+      return NextResponse.json({ source: p.source, model: p.model, analysis });
+    } catch (err) {
+      lastError = err instanceof Error ? err.message : "Unknown error";
+      // try next provider
     }
-
-    const data = await response.json();
-    const analysis = data.choices?.[0]?.message?.content || "";
-
-    return NextResponse.json({
-      source: "qwen",
-      model: "qwen-turbo",
-      analysis,
-    });
-  } catch (err) {
-    return NextResponse.json({
-      source: "local",
-      analysis: generateLocalAnalysis(body, stageLabel),
-      error: err instanceof Error ? err.message : "Unknown error",
-    });
   }
+
+  // No provider configured or all failed → local offline analysis.
+  return NextResponse.json({
+    source: "local",
+    analysis: generateLocalAnalysis(body, stageLabel),
+    ...(lastError ? { error: lastError } : {}),
+  });
 }
 
 function generateLocalAnalysis(data: AnalyzeRequest, stageLabel: string): string {

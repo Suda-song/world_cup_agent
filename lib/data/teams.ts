@@ -70,7 +70,7 @@ export const TEAMS: Team[] = [
   { id: "jam", name: "牙买加", flag: "🇯🇲", elo: 1460, fifaRank: 60, group: "K", confederation: "CONCACAF", style: "counter", ratings: { attack: 58, defense: 56, midfield: 54, speed: 66, experience: 54, form: 58 } },
 
   // ===== L 组 =====
-  { id: "ita", name: "意大利", flag: "🇮🇹", elo: 1870, fifaRank: 9, group: "L", confederation: "UEFA", style: "defensive", ratings: { attack: 76, defense: 82, midfield: 78, speed: 70, experience: 80, form: 76 } },
+  { id: "tur", name: "土耳其", flag: "🇹🇷", elo: 1700, fifaRank: 27, group: "L", confederation: "UEFA", style: "counter", ratings: { attack: 72, defense: 66, midfield: 70, speed: 72, experience: 64, form: 70 } },
   { id: "aut", name: "奥地利", flag: "🇦🇹", elo: 1670, fifaRank: 22, group: "L", confederation: "UEFA", style: "press", ratings: { attack: 70, defense: 68, midfield: 68, speed: 68, experience: 64, form: 68 } },
   { id: "cpv", name: "佛得角", flag: "🇨🇻", elo: 1480, fifaRank: 70, group: "L", confederation: "CAF", style: "counter", ratings: { attack: 58, defense: 56, midfield: 56, speed: 62, experience: 54, form: 58 } },
   { id: "qat", name: "卡塔尔", flag: "🇶🇦", elo: 1420, fifaRank: 53, group: "L", confederation: "AFC", style: "possession", ratings: { attack: 54, defense: 54, midfield: 54, speed: 56, experience: 52, form: 54 } },
