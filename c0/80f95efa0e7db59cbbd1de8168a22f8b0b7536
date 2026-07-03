@@ -1,0 +1,25 @@
+app/bracket/page.tsx
+  s_b2bb477cc3bc7f::t_4a6897101a7a4a 277-278
+  s_b2bb477cc3bc7f::t_9f92d8935d55bb 365-376,381,383
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.9",
+  "base_commit_sha": "c080f95efa0e7db59cbbd1de8168a22f8b0b7536",
+  "prompts": {},
+  "humans": {
+    "h_9d3c9d76b5b792": {
+      "author": "songdingan1 <songdingan1@xiaohongshu.com>"
+    }
+  },
+  "sessions": {
+    "s_b2bb477cc3bc7f": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "416cf002-30d1-48e9-b173-4e401d24d8ac",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "songdingan1 <songdingan1@xiaohongshu.com>"
+    }
+  }
+}
