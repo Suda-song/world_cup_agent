@@ -1,0 +1,76 @@
+lib/data/teams.ts
+  s_b2bb477cc3bc7f::t_6d97644879df1c 79,82-86
+  s_b2bb477cc3bc7f::t_36724600cbcb0f 77-78,80-81
+lib/api/client.ts
+  s_b2bb477cc3bc7f::t_5e82ad8baaf7a6 87-88
+  h_9d3c9d76b5b792 39,66,106,119,129,142,150
+  s_b2bb477cc3bc7f::t_74633780f9b117 192
+  s_b2bb477cc3bc7f::t_58aef9d6adc653 22-26
+  s_b2bb477cc3bc7f::t_de24545b82f482 1,3-6,8-9,12-14,18-21,27,36-38,40,45-65,67-86,89-105,107-118,120-128,130-133,137-141,143-149,151-181,184-191,193-213
+.nvmrc
+  h_9d3c9d76b5b792 1
+app/api/live-results/route.ts
+  s_b2bb477cc3bc7f::t_b31aa7bc48a495 34-39,51
+  s_b2bb477cc3bc7f::t_6305958e7eef0d 149-152,155
+  s_b2bb477cc3bc7f::t_8d5d28592918e1 8-12,21,42-44,46,48,50,56-59,62-68,70-71,73-84,86-89,97,103-107,110-119,121-132,135-139,143-145,147,153,157,160,164,167,172-174,181
+  s_b2bb477cc3bc7f::t_8ce92651e4b154 1-7,13-20,24-33,49,52,60-61,91-96,99-102,108-109,120,141,169-171,176-180,182-185
+  s_b2bb477cc3bc7f::t_8ca508f82c4ee2 22-23,40-41,45,47,53-55,90,98,133-134,140,142,146,148,154,156,158-159,161-163,165-166,168,175
+  s_b2bb477cc3bc7f::t_5172c4ffe1dd97 69,85
+  s_b2bb477cc3bc7f::t_5084d7cd124d2d 72
+lib/prediction/detailedSim.ts
+  s_b2bb477cc3bc7f::t_ba56ca4293c37b 389,391-402,404,406-408,410-418,421,423,426-432,434-439,445-446,449-472
+  s_b2bb477cc3bc7f::t_18d602bfe77db9 174-177,179,182,184
+  s_b2bb477cc3bc7f::t_9d8edbfa5a7d06 105-106
+  s_b2bb477cc3bc7f::t_0d628b55519ad9 232
+  s_b2bb477cc3bc7f::t_134f4564889f85 289,295-312,314-322,324-325,329-333,336-382
+  s_b2bb477cc3bc7f::t_af3fd38f2804dd 405
+  s_b2bb477cc3bc7f::t_7685683328b239 41-42
+  s_b2bb477cc3bc7f::t_c77f50af580b48 233,238-239,245-248,250-252,255,257,261,274,278,313,326,328
+  s_b2bb477cc3bc7f::t_a6446be1c8b7ab 104,119-128
+  s_b2bb477cc3bc7f::t_8bb28a4ff6bf2b 49
+  s_b2bb477cc3bc7f::t_a7ef4d7588a118 218
+  s_b2bb477cc3bc7f::t_64ab1f83618bf4 223-225,229-230,234-235,237,259-260,272-273,279,282,286
+  s_b2bb477cc3bc7f::t_fd5af2093a9199 262-270,275,280-281,283-285
+  s_b2bb477cc3bc7f::t_782822bf66b0c1 222,226-228,231,249,253-254,256,258,271,276-277,323,419-420,433,440-444,447
+  s_b2bb477cc3bc7f::t_96c68abf3da969 43-44
+  s_b2bb477cc3bc7f::t_5a2da4af8c0cb0 473-475,478
+  s_b2bb477cc3bc7f::t_01fe803347526f 217
+.env.example
+  s_b2bb477cc3bc7f::t_8f1039ab6188cf 9-11
+app/bracket/page.tsx
+  s_b2bb477cc3bc7f::t_09723b85562c8c 63,68-69,73,79
+  s_b2bb477cc3bc7f::t_5f335746292d62 294
+  s_b2bb477cc3bc7f::t_18930f31963422 4-7,9,16
+  s_b2bb477cc3bc7f::t_ad80c55a421ab3 295,297-302,304-315,320,322-327,329,335,344,349
+  s_b2bb477cc3bc7f::t_1810ca92ba4797 44,50,56,58,67,70-71,74,76-78,80-85
+  s_b2bb477cc3bc7f::t_fd3b53abe8649b 303,328
+  s_b2bb477cc3bc7f::t_30b8c7aba16b9d 286
+  s_b2bb477cc3bc7f::t_ca1af48e5a96fd 392,394-395,397-398,406,415,423,425-430
+  h_9d3c9d76b5b792 8,65,75,154-160,201,246,248-249,251-252,254
+  s_b2bb477cc3bc7f::t_1883a645da1596 45-46,57,59-62,64,66,72
+  s_b2bb477cc3bc7f::t_d373893c7345d5 143-153,161-169
+  s_b2bb477cc3bc7f::t_8a5ff5a36e83b8 10
+  s_b2bb477cc3bc7f::t_7dbe8a1e0c49b7 217,219-223
+  s_b2bb477cc3bc7f::t_3cc8857ee5702f 170-176
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.9",
+  "base_commit_sha": "9d9c0a27c4ee0bb89297949add0b9722a7fcd1c7",
+  "prompts": {},
+  "humans": {
+    "h_9d3c9d76b5b792": {
+      "author": "songdingan1 <songdingan1@xiaohongshu.com>"
+    }
+  },
+  "sessions": {
+    "s_b2bb477cc3bc7f": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "416cf002-30d1-48e9-b173-4e401d24d8ac",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "songdingan1 <songdingan1@xiaohongshu.com>"
+    }
+  }
+}
