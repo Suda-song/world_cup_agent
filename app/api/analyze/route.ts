@@ -58,12 +58,14 @@ Elo评分：${body.teamA} ${body.eloA} vs ${body.teamB} ${body.eloB}
   // 全链路使用 Qwen 模型（通义千问，DashScope 兼容模式）。未配置 key 时用本地兜底。
   const qwenKey = process.env.QWEN_API_KEY || process.env.DASHSCOPE_API_KEY;
 
+  const qwenBaseUrl =
+    process.env.QWEN_BASE_URL || "https://coding.dashscope.aliyuncs.com/v1";
   const providers: { source: string; model: string; url: string; key?: string }[] = [];
   if (qwenKey) {
     providers.push({
       source: "qwen",
-      model: process.env.QWEN_MODEL || "qwen-plus",
-      url: `${(process.env.QWEN_BASE_URL || "https://dashscope.aliyuncs.com/compatible-mode/v1").replace(/\/$/, "")}/chat/completions`,
+      model: process.env.QWEN_MODEL || "qwen3.7-plus",
+      url: `${qwenBaseUrl.replace(/\/$/, "")}/chat/completions`,
       key: qwenKey,
     });
   }
@@ -71,34 +73,40 @@ Elo评分：${body.teamA} ${body.eloA} vs ${body.teamB} ${body.eloB}
   let lastError = "";
   for (const p of providers) {
     try {
+      const payload = {
+        model: p.model,
+        messages: [
+          {
+            role: "system",
+            content:
+              "你是专业足球分析师，擅长赛事预测分析。回答简洁专业，中文输出。",
+          },
+          { role: "user", content: prompt },
+        ],
+        temperature: 0.7,
+        max_tokens: 300,
+      };
+      console.log("[Qwen][analyze][request]", JSON.stringify({ url: p.url, ...payload }, null, 2));
+
       const response = await fetch(p.url, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${p.key}`,
         },
-        body: JSON.stringify({
-          model: p.model,
-          messages: [
-            {
-              role: "system",
-              content:
-                "你是专业足球分析师，擅长赛事预测分析。回答简洁专业，中文输出。",
-            },
-            { role: "user", content: prompt },
-          ],
-          temperature: 0.7,
-          max_tokens: 300,
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
+        const body = await response.text().catch(() => "");
+        console.log("[Qwen][analyze][error]", JSON.stringify({ status: response.status, body: body.slice(0, 1000) }, null, 2));
         throw new Error(`${p.source} API error: ${response.status}`);
       }
 
       const data = await response.json();
       const analysis = data.choices?.[0]?.message?.content || "";
       if (!analysis) throw new Error(`${p.source} empty response`);
+      console.log("[Qwen][analyze][response]", JSON.stringify({ model: p.model, content: analysis }, null, 2));
 
       return NextResponse.json({ source: p.source, model: p.model, analysis });
     } catch (err) {

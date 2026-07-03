@@ -96,6 +96,27 @@ export interface MatchResult {
   wentToPenalties?: boolean;
 }
 
+export type MatchState = "finished" | "confirmed" | "pending";
+
+export interface KnownMatchResult {
+  teamA: string;
+  teamB: string;
+  scoreA: number | null;
+  scoreB: number | null;
+  winner: string | null;
+  wentToPenalties: boolean;
+  stage: Stage | string;
+  status: string;
+  matchState: MatchState;
+  group?: string;
+  utcDate?: string;
+}
+
+export interface LiveTournamentContext {
+  knockoutMatches?: KnownMatchResult[];
+  groupMatches?: KnownMatchResult[];
+}
+
 export interface TournamentResult {
   champion: string;
   runnerUp: string;

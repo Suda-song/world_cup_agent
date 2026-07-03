@@ -1,4 +1,4 @@
-import type { StageProbabilities } from "../types";
+import type { StageProbabilities, LiveTournamentContext } from "../types";
 import { TEAMS } from "../data/teams";
 import { simulateTournament } from "./simulator";
 
@@ -24,7 +24,8 @@ export interface MonteCarloResult {
 export function runMonteCarlo(
   n: number,
   moodMods: Record<string, number> = {},
-  onProgress?: (done: number, total: number) => void
+  onProgress?: (done: number, total: number) => void,
+  liveContext?: LiveTournamentContext,
 ): MonteCarloResult {
   const reach: Record<string, number[]> = {}; // [r32,r16,qf,sf,final,champion] counts
   const championCounts: Record<string, number> = {};
@@ -39,7 +40,7 @@ export function runMonteCarlo(
   }
 
   for (let i = 0; i < n; i++) {
-    const res = simulateTournament(moodMods);
+    const res = simulateTournament(moodMods, liveContext);
     for (const t of TEAMS) {
       const rank = STAGE_RANK[res.stageReached[t.id] ?? "group"];
       // 累加：抵达某阶段及以上则对应档位 +1

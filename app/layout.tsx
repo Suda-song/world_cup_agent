@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Sidebar from "@/components/layout/Sidebar";
+import FloatingAgent from "@/components/agent/FloatingAgent";
+import EntryGuard from "@/components/common/EntryGuard";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -41,6 +43,8 @@ export default function RootLayout({
           <Sidebar />
           <main className="flex-1 min-w-0 pt-14 lg:pt-0">{children}</main>
         </div>
+        <FloatingAgent />
+        <EntryGuard />
       </body>
     </html>
   );

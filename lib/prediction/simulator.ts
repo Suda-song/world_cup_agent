@@ -1,4 +1,4 @@
-import type { Team, Stage, MatchResult } from "../types";
+import type { Team, Stage, MatchResult, LiveTournamentContext, KnownMatchResult } from "../types";
 import { TEAMS } from "../data/teams";
 import { teamsInGroup, GROUPS } from "../data/loader";
 import { simulateMatch } from "./poisson";
@@ -37,8 +37,84 @@ function seedOrder(n: number): number[] {
   return pls;
 }
 
+function pairKey(a: string, b: string): string {
+  return [a, b].sort().join("-");
+}
+
+function matchKey(stage: Stage | string, a: string, b: string): string {
+  return `${stage}:${pairKey(a, b)}`;
+}
+
+function isFinished(r: KnownMatchResult): boolean {
+  return r.status === "FINISHED" && !!r.winner && r.scoreA !== null && r.scoreB !== null;
+}
+
+function resolveKnownMatch(
+  stage: Stage,
+  a: Team,
+  b: Team,
+  knownMatches: Map<string, KnownMatchResult>,
+  isKnockout: boolean,
+  moodMods: Record<string, number>,
+): { scoreA: number; scoreB: number; winner: string; wentToPenalties?: boolean } {
+  const known = knownMatches.get(matchKey(stage, a.id, b.id));
+  if (known && isFinished(known)) {
+    const flipped = known.teamA === b.id;
+    return flipped
+      ? {
+          scoreA: known.scoreB!,
+          scoreB: known.scoreA!,
+          winner: known.winner!,
+          wentToPenalties: known.wentToPenalties,
+        }
+      : {
+          scoreA: known.scoreA!,
+          scoreB: known.scoreB!,
+          winner: known.winner!,
+          wentToPenalties: known.wentToPenalties,
+        };
+  }
+
+  return simulateMatch(a, b, isKnockout, moodMods);
+}
+
+function buildPairsFromMatches(
+  stage: Stage,
+  liveContext: LiveTournamentContext | undefined,
+  teamMap: Record<string, Team>,
+): [Team, Team][] | null {
+  const live = liveContext?.knockoutMatches?.filter((m) => m.stage === stage) ?? [];
+  if (live.length === 0) return null;
+
+  const pairs: [Team, Team][] = [];
+  for (const m of live) {
+    const a = teamMap[m.teamA];
+    const b = teamMap[m.teamB];
+    if (a && b) pairs.push([a, b]);
+  }
+
+  return pairs.length > 0 ? pairs : null;
+}
+
+function buildPairsFromWinners(prevWinners: Team[]): [Team, Team][] {
+  const pairs: [Team, Team][] = [];
+  for (let i = 0; i < prevWinners.length; i += 2) {
+    if (prevWinners[i] && prevWinners[i + 1]) pairs.push([prevWinners[i], prevWinners[i + 1]]);
+  }
+  return pairs;
+}
+
+function fillMissingPairs(livePairs: [Team, Team][], fallbackTeams: Team[], expectedCount: number): [Team, Team][] {
+  if (livePairs.length >= expectedCount) return livePairs;
+
+  const knownTeamIds = new Set(livePairs.flatMap(([a, b]) => [a.id, b.id]));
+  const remaining = fallbackTeams.filter((t) => !knownTeamIds.has(t.id));
+  return [...livePairs, ...buildPairsFromWinners(remaining)].slice(0, expectedCount);
+}
+
 export function simulateTournament(
-  moodMods: Record<string, number> = {}
+  moodMods: Record<string, number> = {},
+  liveContext?: LiveTournamentContext,
 ): SimResult {
   const teamMap: Record<string, Team> = Object.fromEntries(
     TEAMS.map((t) => [t.id, t])
@@ -52,16 +128,56 @@ export function simulateTournament(
   const runnersUp: Team[] = []; // 12 组次名
   const thirds: GroupStanding[] = []; // 12 组第三
 
+  const groupLive = liveContext?.groupMatches ?? [];
+  const knockoutLive = liveContext?.knockoutMatches ?? [];
+  const knownMatches = new Map<string, KnownMatchResult>();
+  for (const r of [...groupLive, ...knockoutLive]) {
+    knownMatches.set(matchKey(r.stage, r.teamA, r.teamB), r);
+  }
+
+  const groupLiveByGroup: Record<string, KnownMatchResult[]> = {};
+  for (const r of groupLive) {
+    const group = r.group ?? teamMap[r.teamA]?.group ?? teamMap[r.teamB]?.group;
+    if (group) (groupLiveByGroup[group] ||= []).push(r);
+  }
+
   for (const g of GROUPS) {
-    const teams = teamsInGroup(g);
+    const liveGroupMatches = groupLiveByGroup[g] ?? [];
+    const liveTeamIds = [...new Set(liveGroupMatches.flatMap((m) => [m.teamA, m.teamB]))]
+      .filter((id) => !!teamMap[id]);
+    const teams =
+      liveTeamIds.length >= 4
+        ? liveTeamIds.map((id) => teamMap[id])
+        : [...teamsInGroup(g), ...liveTeamIds.map((id) => teamMap[id])]
+            .filter((team, idx, arr): team is Team => !!team && arr.findIndex((t) => t?.id === team.id) === idx);
     const rows: Record<string, GroupStanding> = {};
     for (const t of teams) rows[t.id] = { team: t, pts: 0, gf: 0, ga: 0 };
 
-    // 单循环 6 场
+    const playedPairs = new Set<string>();
+    for (const m of liveGroupMatches) {
+      const a = teamMap[m.teamA];
+      const b = teamMap[m.teamB];
+      if (!a || !b || !rows[a.id] || !rows[b.id]) continue;
+      playedPairs.add(pairKey(a.id, b.id));
+      const result = resolveKnownMatch("group", a, b, knownMatches, false, moodMods);
+      rows[a.id].gf += result.scoreA;
+      rows[a.id].ga += result.scoreB;
+      rows[b.id].gf += result.scoreB;
+      rows[b.id].ga += result.scoreA;
+      if (result.scoreA > result.scoreB) rows[a.id].pts += 3;
+      else if (result.scoreA < result.scoreB) rows[b.id].pts += 3;
+      else {
+        rows[a.id].pts += 1;
+        rows[b.id].pts += 1;
+      }
+    }
+
+    // 单循环 6 场；接口已给出的场次不重复模拟
     for (let i = 0; i < teams.length; i++) {
       for (let j = i + 1; j < teams.length; j++) {
         const a = teams[i];
         const b = teams[j];
+        if (playedPairs.has(pairKey(a.id, b.id))) continue;
         const m = simulateMatch(a, b, false, moodMods);
         rows[a.id].gf += m.scoreA;
         rows[a.id].ga += m.scoreB;
@@ -97,29 +213,14 @@ export function simulateTournament(
   const bracket = order.map((seed) => seeded[seed - 1]);
 
   // ===== 淘汰赛 =====
-  let round = bracket;
-  const stages: Stage[] = ["r16", "qf", "sf", "final", "champion"];
-  let roundIdx = 0;
-
-  while (round.length > 1) {
+  function runStage(stageName: Stage, pairs: [Team, Team][], nextStage: Stage): Team[] {
     const next: Team[] = [];
-    for (let i = 0; i < round.length; i += 2) {
-      const a = round[i];
-      const b = round[i + 1];
-      const m = simulateMatch(a, b, true, moodMods);
+    for (const [a, b] of pairs) {
+      const m = resolveKnownMatch(stageName, a, b, knownMatches, true, moodMods);
       const winner = teamMap[m.winner];
+      if (!winner) continue;
       next.push(winner);
-      stageReached[winner.id] = stages[roundIdx];
-      const stageName: Stage =
-        round.length === 32
-          ? "r32"
-          : round.length === 16
-          ? "r16"
-          : round.length === 8
-          ? "qf"
-          : round.length === 4
-          ? "sf"
-          : "final";
+      stageReached[winner.id] = nextStage;
       matches.push({
         teamA: a.id,
         teamB: b.id,
@@ -130,19 +231,34 @@ export function simulateTournament(
         wentToPenalties: m.wentToPenalties,
       });
     }
-    round = next;
-    roundIdx++;
+    return next;
   }
 
-  const champion = round[0];
+  const liveR32Pairs = buildPairsFromMatches("r32", liveContext, teamMap);
+  const r32Pairs = liveR32Pairs ? fillMissingPairs(liveR32Pairs, bracket, 16) : buildPairsFromWinners(bracket);
+  const r32Winners = runStage("r32", r32Pairs, "r16");
+  const liveR16Pairs = buildPairsFromMatches("r16", liveContext, teamMap);
+  const r16Pairs = liveR16Pairs ? fillMissingPairs(liveR16Pairs, r32Winners, 8) : buildPairsFromWinners(r32Winners);
+  const r16Winners = runStage("r16", r16Pairs, "qf");
+  const liveQfPairs = buildPairsFromMatches("qf", liveContext, teamMap);
+  const qfPairs = liveQfPairs ? fillMissingPairs(liveQfPairs, r16Winners, 4) : buildPairsFromWinners(r16Winners);
+  const qfWinners = runStage("qf", qfPairs, "sf");
+  const liveSfPairs = buildPairsFromMatches("sf", liveContext, teamMap);
+  const sfPairs = liveSfPairs ? fillMissingPairs(liveSfPairs, qfWinners, 2) : buildPairsFromWinners(qfWinners);
+  const sfWinners = runStage("sf", sfPairs, "final");
+  const liveFinalPairs = buildPairsFromMatches("final", liveContext, teamMap);
+  const finalPairs = liveFinalPairs ? fillMissingPairs(liveFinalPairs, sfWinners, 1) : buildPairsFromWinners(sfWinners);
+  const finalWinners = runStage("final", finalPairs, "champion");
+
+  const champion = finalWinners[0];
   const runnerUp = matches.find((m) => m.stage === "final");
-  stageReached[champion.id] = "champion";
+  if (champion) stageReached[champion.id] = "champion";
 
   return {
-    champion: champion.id,
+    champion: champion?.id ?? "",
     runnerUp: runnerUp
-      ? runnerUp.winner === champion.id
-        ? runnerUp.teamA === champion.id
+      ? runnerUp.winner === champion?.id
+        ? runnerUp.teamA === champion?.id
           ? runnerUp.teamB
           : runnerUp.teamA
         : runnerUp.winner

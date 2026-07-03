@@ -7,6 +7,7 @@ import type { Team, HistoryRecord } from "../types";
 
 const BASE = "https://api.football-data.org/v4";
 const WC_ID = 2000;
+export const FOOTBALL_DATA_CACHE_SECONDS = 600;
 
 function headers(): HeadersInit {
   const key = process.env.FOOTBALL_DATA_API_KEY;
@@ -17,7 +18,7 @@ function headers(): HeadersInit {
 async function get<T>(path: string): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
     headers: headers(),
-    next: { revalidate: 300 }, // 5 分钟缓存
+    next: { revalidate: FOOTBALL_DATA_CACHE_SECONDS }, // 10 分钟缓存
   });
   if (!res.ok) {
     let body = "";

@@ -52,23 +52,26 @@ export async function POST(req: NextRequest) {
 {"stance":"positive|neutral|negative","category":"tactics|form|history|opinion","summary":"20字以内中文摘要"}
 stance=对该球队是利好/中性/利空；category=战术打法(tactics)/球员状态伤病(form)/历史交锋(history)/舆论数据(opinion)。
 文字：${text}`;
-      const qwenBase = (process.env.QWEN_BASE_URL || "https://dashscope.aliyuncs.com/compatible-mode/v1").replace(/\/$/, "");
-      const res = await fetch(
-        `${qwenBase}/chat/completions`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${qwenKey}` },
-          body: JSON.stringify({
-            model: process.env.QWEN_MODEL || "qwen-plus",
-            messages: [{ role: "user", content: prompt }],
-            temperature: 0.3,
-            max_tokens: 200,
-          }),
-        }
-      );
+      const baseUrl =
+        process.env.QWEN_BASE_URL || "https://coding.dashscope.aliyuncs.com/v1";
+      const url = `${baseUrl.replace(/\/$/, "")}/chat/completions`;
+      const payload = {
+        model: process.env.QWEN_MODEL || "qwen3.7-plus",
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0.3,
+        max_tokens: 200,
+      };
+      console.log("[Qwen][sentiment][request]", JSON.stringify({ url, ...payload }, null, 2));
+
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${qwenKey}` },
+        body: JSON.stringify(payload),
+      });
       if (res.ok) {
         const data = await res.json();
         const raw = data.choices?.[0]?.message?.content || "";
+        console.log("[Qwen][sentiment][response]", JSON.stringify({ model: payload.model, content: raw }, null, 2));
         const m = raw.match(/\{[\s\S]*\}/);
         if (m) {
           const parsed = JSON.parse(m[0]);
@@ -79,8 +82,15 @@ stance=对该球队是利好/中性/利空；category=战术打法(tactics)/球�
             summary: parsed.summary,
           });
         }
+      } else {
+        const body = await res.text().catch(() => "");
+        console.log("[Qwen][sentiment][error]", JSON.stringify({ status: res.status, body: body.slice(0, 1000) }, null, 2));
       }
-    } catch {
+    } catch (err) {
+      console.log(
+        "[Qwen][sentiment][fallback]",
+        JSON.stringify({ error: err instanceof Error ? err.message : "qwen-error" }, null, 2),
+      );
       // fall through to local
     }
   }

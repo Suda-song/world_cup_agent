@@ -12,7 +12,8 @@ const NAV_SECTIONS: { title: string; hint: string; items: NavItem[] }[] = [
     title: "核心预测",
     hint: "对外展示",
     items: [
-      { href: "/", label: "总览仪表盘", icon: "M3 12l9-9 9 9M5 10v10h14V10", desc: "夺冠概率与关键指标" },
+      { href: "/agent", label: "预测 Agent", icon: "M12 3l2.2 5.4L20 10l-5.8 1.6L12 17l-2.2-5.4L4 10l5.8-1.6L12 3z", desc: "一键采集·推演·报告", tag: "AI" },
+      { href: "/dashboard", label: "总览仪表盘", icon: "M3 12l9-9 9 9M5 10v10h14V10", desc: "夺冠概率与关键指标" },
       { href: "/bracket", label: "赛程对阵图", icon: "M4 4h16v16H4zM4 9h16M4 15h16M9 4v16M15 4v16", desc: "赛程树·比分·推理链路" },
       { href: "/predict", label: "晋级预测", icon: "M4 18V8l8-5 8 5v10M9 18v-6h6v6", desc: "蒙特卡洛各阶段概率" },
     ],
@@ -47,8 +48,7 @@ function NavLinks({ onClose }: { onClose?: () => void }) {
             <span className="chip">{section.hint}</span>
           </div>
           {section.items.map((item) => {
-            const active =
-              item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+            const active = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
             return (
               <Link
                 key={item.href}
@@ -95,7 +95,7 @@ function SidebarHeader() {
   return (
     <div className="p-5 border-b border-border">
       <div className="flex items-center gap-2.5">
-        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-pitch-bright to-data flex items-center justify-center text-lg">
+        <div className="w-9 h-9 rounded-xl bg-linear-to-br from-pitch-bright to-data flex items-center justify-center text-lg">
           ⚽
         </div>
         <div>
@@ -156,7 +156,7 @@ export default function Sidebar() {
           </svg>
         </button>
         <div className="ml-3 flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-pitch-bright to-data flex items-center justify-center text-sm">⚽</div>
+          <div className="w-7 h-7 rounded-lg bg-linear-to-br from-pitch-bright to-data flex items-center justify-center text-sm">⚽</div>
           <span className="font-bold text-sm">世界杯预测</span>
         </div>
       </div>
@@ -177,7 +177,7 @@ export default function Sidebar() {
       >
         <div className="flex items-center justify-between px-4 h-14 border-b border-border">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-pitch-bright to-data flex items-center justify-center">⚽</div>
+            <div className="w-8 h-8 rounded-xl bg-linear-to-br from-pitch-bright to-data flex items-center justify-center">⚽</div>
             <div>
               <div className="font-bold text-sm leading-tight">世界杯预测</div>
               <div className="text-[10px] text-muted">2026 美加墨 · 48队</div>

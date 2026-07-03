@@ -4,8 +4,27 @@ import { teamMoodModifier } from "./mood/moodModel";
 import { TEAMS, TEAM_MAP } from "./data/teams";
 import { apiUrl } from "./basePath";
 import { computeViewpointMods, type Viewpoint, type SourceConfig } from "./viewpoints";
+import type { KnownMatchResult, LiveTournamentContext } from "./types";
 
 interface RawSourceConfig { source: string; weight: number | string; enabled: number | boolean }
+
+async function fetchLiveTournamentContext(): Promise<LiveTournamentContext | undefined> {
+  try {
+    const res = await fetch(apiUrl("/api/live-results"));
+    const data = (await res.json()) as {
+      available?: boolean;
+      matches?: KnownMatchResult[];
+      groupMatches?: KnownMatchResult[];
+    };
+    if (!data.available) return undefined;
+    return {
+      knockoutMatches: data.matches ?? [],
+      groupMatches: data.groupMatches ?? [],
+    };
+  } catch {
+    return undefined;
+  }
+}
 
 // Persist a completed simulation's champion to the backend (best-effort).
 function savePrediction(result: MonteCarloResult, simCount: number, useMood: boolean) {
@@ -29,6 +48,19 @@ function savePrediction(result: MonteCarloResult, simCount: number, useMood: boo
   });
 }
 
+export interface AgentChatMessage {
+  role: "user" | "assistant";
+  content: string;
+  streaming?: boolean;
+  meta?: {
+    topChampions?: { team: string; probability: number }[];
+    finalPrediction?: { teamA: string; teamB: string; score: string; winner: string } | null;
+    darkHorses?: { team: string; probability: number; fifaRank: number }[];
+    source?: string;
+    model?: string;
+  };
+}
+
 interface AppState {
   mcResult: MonteCarloResult | null;
   running: boolean;
@@ -37,10 +69,16 @@ interface AppState {
   useMood: boolean;
   viewpointMods: Record<string, number>;
   viewpointCount: number;
+  // agent 对话历史，跨 tab 切换保留
+  agentMessages: AgentChatMessage[];
+  agentInitialized: boolean;
   runSimulation: (n?: number) => void;
   setSimCount: (n: number) => void;
   setUseMood: (v: boolean) => void;
   loadViewpoints: () => Promise<void>;
+  setAgentMessages: (msgs: AgentChatMessage[] | ((prev: AgentChatMessage[]) => AgentChatMessage[])) => void;
+  setAgentInitialized: (v: boolean) => void;
+  clearAgentChat: () => void;
 }
 
 // 计算各队心情修正系数
@@ -58,20 +96,26 @@ export const useAppStore = create<AppState>((set, get) => ({
   useMood: true,
   viewpointMods: {},
   viewpointCount: 0,
+  agentMessages: [],
+  agentInitialized: false,
   runSimulation: (n?: number) => {
     const count = n ?? get().simCount;
     set({ running: true, progress: { done: 0, total: count } });
     // 异步执行以先渲染 loading
-    setTimeout(() => {
+    setTimeout(async () => {
       const moodMods = get().useMood ? computeMoodMods() : {};
       const vpMods = get().viewpointMods;
+      const liveContext = await fetchLiveTournamentContext();
       // 合并：心情修正 × 数据源观点修正
       const mods: Record<string, number> = {};
       for (const t of TEAMS) {
         mods[t.id] = (moodMods[t.id] ?? 1) * (vpMods[t.id] ?? 1);
       }
-      const result = runMonteCarlo(count, mods, (done, total) =>
-        set({ progress: { done, total } })
+      const result = runMonteCarlo(
+        count,
+        mods,
+        (done, total) => set({ progress: { done, total } }),
+        liveContext,
       );
       set({ mcResult: result, running: false, simCount: count });
       savePrediction(result, count, get().useMood);
@@ -79,6 +123,12 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
   setSimCount: (n) => set({ simCount: n }),
   setUseMood: (v) => set({ useMood: v }),
+  setAgentMessages: (msgs) =>
+    set((state) => ({
+      agentMessages: typeof msgs === "function" ? msgs(state.agentMessages) : msgs,
+    })),
+  setAgentInitialized: (v) => set({ agentInitialized: v }),
+  clearAgentChat: () => set({ agentMessages: [], agentInitialized: false }),
   loadViewpoints: async () => {
     try {
       const [vpRes, cfgRes] = await Promise.all([

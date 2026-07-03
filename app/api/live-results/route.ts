@@ -1,9 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
-import { fetchFinishedMatches, fetchMatchesByStage, apiStatus } from "@/lib/api/client";
+import { FOOTBALL_DATA_CACHE_SECONDS, fetchMatchesByStage, apiStatus } from "@/lib/api/client";
 import type { LiveMatch } from "@/lib/api/client";
 import { TEAMS } from "@/lib/data/teams";
 
 export const dynamic = "force-dynamic";
+
+const LIVE_RESULTS_CACHE_CONTROL = `public, max-age=${FOOTBALL_DATA_CACHE_SECONDS}, s-maxage=${FOOTBALL_DATA_CACHE_SECONDS}, stale-while-revalidate=60`;
+
+function cachedJson(body: unknown) {
+  return NextResponse.json(body, {
+    headers: {
+      "Cache-Control": LIVE_RESULTS_CACHE_CONTROL,
+    },
+  });
+}
 
 // football-data.org stage → 项目内部 stage key（按顺序排列）
 const STAGE_ORDER = ["group", "r32", "r16", "qf", "sf", "final"] as const;
@@ -90,7 +100,7 @@ function toMatchRecord(m: LiveMatch, stageKey: StageKey): MatchRecord | null {
 export async function GET(_req: NextRequest) {
   const status = apiStatus();
   if (!status.available) {
-    return NextResponse.json({
+    return cachedJson({
       available: false,
       reason: status.reason,
       matches: [],
@@ -100,15 +110,15 @@ export async function GET(_req: NextRequest) {
   }
 
   try {
-    // 并行拉取：小组赛已完成 + 所有淘汰赛阶段（含未开赛）
+    // 并行拉取：小组赛全量 + 所有淘汰赛阶段（含未开赛）
     const [groupFinished, ...knockoutResults] = await Promise.all([
-      fetchFinishedMatches("GROUP_STAGE"),
+      fetchMatchesByStage("GROUP_STAGE"),
       ...KNOCKOUT_API_STAGES.map((s) => fetchMatchesByStage(s).catch(() => [] as LiveMatch[])),
     ]);
 
     const unknownTeams: string[] = [];
 
-    // ── 小组赛（仅已完成）──
+    // ── 小组赛（含已完成与已确认待踢）──
     const groupMatches: MatchRecord[] = [];
     for (const m of groupFinished) {
       const rec = toMatchRecord(m, "group");
@@ -167,7 +177,7 @@ export async function GET(_req: NextRequest) {
       finishedMatchCount: allMatches.filter((m) => m.status === "FINISHED").length,
     };
 
-    return NextResponse.json({
+    return cachedJson({
       available: true,
       count: allMatches.length,
       matches: knockoutMatches,       // 淘汰赛（供 detailedSim 构建 bracket）

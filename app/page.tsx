@@ -1,185 +1,197 @@
 "use client";
 
-import { useEffect } from "react";
-import Link from "next/link";
-import { useAppStore } from "@/lib/store";
-import { getTeam, getHistory } from "@/lib/data/loader";
-import StageTimeline from "@/components/common/StageTimeline";
-import { currentFocusStage, formatDate } from "@/lib/schedule";
+import { useEffect, useState, useRef } from "react";
+import { useRouter } from "next/navigation";
 
-export default function HomePage() {
-  const { mcResult, running, runSimulation, loadViewpoints } = useAppStore();
+interface Star {
+  id: number;
+  left: number;
+  top: number;
+  opacity: number;
+  duration: number;
+  delay: number;
+}
+
+interface Particle {
+  id: number;
+  x: number;
+  y: number;
+}
+
+const PARTICLE_DIRS = [
+  { dx: 130, dy: -110 },
+  { dx: -100, dy: -130 },
+  { dx: 150, dy: 80 },
+  { dx: -140, dy: 90 },
+  { dx: 60, dy: -160 },
+  { dx: -70, dy: 150 },
+  { dx: 180, dy: -40 },
+  { dx: -170, dy: -50 },
+  { dx: 90, dy: 170 },
+  { dx: -90, dy: -170 },
+  { dx: 120, dy: 120 },
+  { dx: -120, dy: -120 },
+  { dx: -160, dy: 60 },
+  { dx: 160, dy: -70 },
+  { dx: 40, dy: 180 },
+  { dx: -40, dy: -180 },
+  { dx: 200, dy: 20 },
+  { dx: -200, dy: -20 },
+  { dx: 70, dy: -200 },
+  { dx: -80, dy: 190 },
+  { dx: 140, dy: -140 },
+  { dx: -150, dy: 130 },
+  { dx: 100, dy: 200 },
+  { dx: -110, dy: -190 },
+];
+
+export default function LandingPage() {
+  const router = useRouter();
+  const [phase, setPhase] = useState<"idle" | "glow" | "expand">("idle");
+  const [mounted, setMounted] = useState(false);
+  const [stars, setStars] = useState<Star[]>([]);
+  const [particles, setParticles] = useState<Particle[]>([]);
+  const buttonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
-    if (!mcResult && !running) {
-      // Load user viewpoints first so they factor into the simulation.
-      loadViewpoints().finally(() => runSimulation(3000));
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    const s: Star[] = Array.from({ length: 60 }, (_, i) => ({
+      id: i,
+      left: parseFloat((Math.random() * 100).toFixed(3)),
+      top: parseFloat((Math.random() * 100).toFixed(3)),
+      opacity: parseFloat((Math.random() * 0.6 + 0.1).toFixed(3)),
+      duration: parseFloat((2 + Math.random() * 3).toFixed(2)),
+      delay: parseFloat((Math.random() * 3).toFixed(2)),
+    }));
+    setStars(s);
+    setMounted(true);
   }, []);
 
-  const top10 = mcResult?.topChampions.slice(0, 10) ?? [];
-  const maxPct = top10[0]?.pct ?? 1;
+  const handleEnter = () => {
+    if (phase !== "idle") return;
 
-  const upset = mcResult
-    ? [...mcResult.topChampions]
-        .filter((c) => c.pct > 0.005)
-        .sort((a, b) => (getTeam(b.teamId)?.fifaRank ?? 99) - (getTeam(a.teamId)?.fifaRank ?? 99))[0]
-    : null;
-  const darkHorse = mcResult
-    ? [...mcResult.topChampions]
-        .filter((c) => (getTeam(c.teamId)?.fifaRank ?? 99) > 10)
-        .sort((a, b) => b.pct - a.pct)[0]
-    : null;
-  const rivalry = pickRivalry();
+    const pts: Particle[] = Array.from({ length: 24 }, (_, i) => ({
+      id: i,
+      x: parseFloat((35 + Math.random() * 30).toFixed(3)),
+      y: parseFloat((35 + Math.random() * 30).toFixed(3)),
+    }));
+    setParticles(pts);
+    setPhase("glow");
+
+    setTimeout(() => setPhase("expand"), 600);
+    setTimeout(() => {
+      sessionStorage.setItem("wc_entered", "1");
+      router.push("/agent");
+    }, 1800);
+  };
 
   return (
-    <div className="p-6 md:p-8 max-w-[1400px] mx-auto">
-      <div className="card p-6 md:p-8 mb-6 relative overflow-hidden">
-        <div className="absolute -right-10 -top-10 text-[180px] opacity-5 select-none">🏆</div>
-        <div className="relative">
-          <div className="flex items-center gap-2 text-xs text-muted mb-2 flex-wrap">
-            <span className="px-2 py-0.5 rounded-full bg-pitch/15 text-pitch-bright">2026 美加墨世界杯</span>
-            <span>48 队 · 12 组 · 新赛制</span>
-            <span className="px-2 py-0.5 rounded-full bg-warn/15 text-warn">
-              当前：{currentFocusStage().stage.labelFull}（{formatDate(currentFocusStage().stage.start)}–{formatDate(currentFocusStage().stage.end)}）· 已进入淘汰赛
-            </span>
-          </div>
-          <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-            <span className="shimmer-text">世界杯冠军预测系统</span>
-          </h1>
-          <p className="text-sm text-muted mt-2 max-w-2xl">
-            基于 Elo 评分 + 泊松进球模型 + 蒙特卡洛模拟，整合完整赛程对阵、多维度图关系、战术对抗设计与球员心情分析，搭载 Qwen AI 赛事分析，预测各队从小组赛到夺冠的概率与比分。
-          </p>
-          <div className="flex flex-wrap items-center gap-3 mt-4">
-            <Link href="/bracket" className="px-4 py-2 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm font-semibold hover:brightness-110 transition">
-              查看赛程对阵图 →
-            </Link>
-            <Link href="/predict" className="px-4 py-2 rounded-lg bg-surface-2 border border-border text-sm font-medium hover:bg-surface transition">
-              晋级预测
-            </Link>
-            <span className="text-[11px] text-muted">
-              {running ? "正在跑蒙特卡洛模拟…" : mcResult ? `已模拟 ${mcResult.n.toLocaleString()} 次` : ""}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      <div className="mb-6">
-        <StageTimeline />
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-6">
-        <div className="card p-5 lg:col-span-2">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-bold">夺冠概率 Top 10</h3>
-            <Link href="/predict" className="text-[11px] text-data">查看完整 →</Link>
-          </div>
-          {top10.length > 0 ? (
-            <div className="space-y-2">
-              {top10.map((c, i) => {
-                const t = getTeam(c.teamId);
-                return (
-                  <div key={c.teamId} className="flex items-center gap-3">
-                    <span className="w-5 text-xs text-muted font-mono text-right">{i + 1}</span>
-                    <span className="w-28 text-sm flex items-center gap-1.5 shrink-0">
-                      <span className="text-base">{t?.flag}</span>
-                      <span className="truncate">{t?.name}</span>
-                    </span>
-                    <div className="flex-1 h-6 rounded-md bg-surface-2 overflow-hidden">
-                      <div
-                        className="h-full rounded-md flex items-center justify-end px-2 animate-bar"
-                        style={{
-                          width: `${(c.pct / maxPct) * 100}%`,
-                          background:
-                            i === 0 ? "linear-gradient(90deg,#fbbf24,#f97316)" : i < 3 ? "linear-gradient(90deg,#22c55e,#16a34a)" : "linear-gradient(90deg,#38bdf8,#0ea5e9)",
-                        }}
-                      >
-                        <span className="text-[10px] font-mono font-bold text-[#070b14]">
-                          {(c.pct * 100).toFixed(1)}%
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="h-48 flex items-center justify-center text-muted text-sm">
-              {running ? "模拟中…" : "等待模拟"}
-            </div>
-          )}
-        </div>
-
-        <div className="space-y-5">
-          {/* 最大冷门 — lightning bolt */}
-          <MetricCard title="最大冷门候选" value={upset ? `${getTeam(upset.teamId)?.flag} ${getTeam(upset.teamId)?.name}` : "—"} sub={upset ? `FIFA #${getTeam(upset.teamId)?.fifaRank} · ${(upset.pct * 100).toFixed(1)}% 夺冠` : ""} color="text-warn" icon="M13 2L3 14h8l-2 8 12-14h-8z" />
-          {/* 最稳黑马 — trending up */}
-          <MetricCard title="最稳黑马" value={darkHorse ? `${getTeam(darkHorse.teamId)?.flag} ${getTeam(darkHorse.teamId)?.name}` : "—"} sub={darkHorse ? `FIFA #${getTeam(darkHorse.teamId)?.fifaRank} · ${(darkHorse.pct * 100).toFixed(1)}% 夺冠` : ""} color="text-pitch-bright" icon="M3 17l6-6 4 4 8-8M21 7v6h-6" />
-          {rivalry && (
-            // 经典对抗 — crossed swords (X)
-            <MetricCard title="经典对抗" value={`${getTeam(rivalry.teamA)?.flag} vs ${getTeam(rivalry.teamB)?.flag}`} sub={`${rivalry.played} 次交锋`} color="text-data" icon="M5 5l14 14M19 5L5 19" />
-          )}
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-        <ModuleCard href="/bracket" icon="M4 4h16v16H4zM4 9h16M4 15h16M9 4v16M15 4v16" title="赛程对阵图" desc="完整赛果预测含比分与推理链路" color="from-amber-500/20 to-transparent border-amber-500/30" />
-        <ModuleCard href="/predict" icon="M4 18V8l8-5 8 5v10M9 18v-6h6v6" title="各阶段晋级预测" desc="蒙特卡洛模拟 48 队 6 阶段抵达概率" color="from-pitch/20 to-transparent border-pitch/30" />
-        <ModuleCard href="/relationships" icon="M12 2a10 10 0 100 20 10 10 0 000-20M2 12h20M12 2a15 15 0 010 20" title="多维度图关系" desc="实力/攻防/风格/历史关系网络图谱" color="from-data/20 to-transparent border-data/30" />
-        <ModuleCard href="/matchup" icon="M12 3v18M5 8l7-5 7 5M5 16l7 5 7-5" title="竞争对抗设计" desc="两两对战泊松预测与战术克制分析" color="from-warn/20 to-transparent border-warn/30" />
-        <ModuleCard href="/mood" icon="M9 11l3 3 8-8M21 12a9 9 0 11-6-8.5" title="球员心情分析" desc="情绪建模与对球队战力的影响" color="from-gold/20 to-transparent border-gold/30" />
-      </div>
-    </div>
-  );
-}
-
-function Icon({ path, size = 20 }: { path: string; size?: number }) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
+    <div
+      className={`fixed inset-0 flex items-center justify-center overflow-hidden transition-colors duration-1000 ${
+        phase === "expand" ? "bg-white" : "bg-[#070b14]"
+      }`}
+      style={{ zIndex: 9999 }}
     >
-      <path d={path} />
-    </svg>
-  );
-}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        {mounted && phase === "idle" && stars.map((s) => (
+          <div
+            key={s.id}
+            className="absolute w-px h-px rounded-full bg-white"
+            style={{
+              left: `${s.left}%`,
+              top: `${s.top}%`,
+              opacity: s.opacity,
+              animation: `star-twinkle ${s.duration}s ease-in-out ${s.delay}s infinite`,
+            }}
+          />
+        ))}
+      </div>
 
-function MetricCard({ title, value, sub, color, icon }: { title: string; value: string; sub: string; color: string; icon: string }) {
-  return (
-    <div className="card p-4 flex items-center gap-3">
-      <div className={`w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center ${color}`}>
-        <Icon path={icon} />
+      {(phase === "glow" || phase === "expand") && (
+        <div
+          className="absolute rounded-full pointer-events-none"
+          style={{
+            width: 300,
+            height: 300,
+            background: "radial-gradient(circle, #22c55e 0%, #0ea5e9 40%, transparent 70%)",
+            transform: phase === "expand" ? "scale(60)" : "scale(0)",
+            opacity: phase === "expand" ? 1 : 0.8,
+            transition: "transform 1.2s cubic-bezier(0.16,1,0.3,1), opacity 1.2s ease",
+          }}
+        />
+      )}
+
+      {particles.map((p, i) => {
+        const dir = PARTICLE_DIRS[i % PARTICLE_DIRS.length];
+        const color = i % 3 === 0 ? "#22c55e" : i % 3 === 1 ? "#fbbf24" : "#38bdf8";
+        return (
+          <div
+            key={p.id}
+            className="absolute w-2 h-2 rounded-full pointer-events-none"
+            style={{
+              left: `${p.x}%`,
+              top: `${p.y}%`,
+              background: color,
+              transform: "translate(-50%,-50%)",
+              animation:
+                phase === "glow" || phase === "expand"
+                  ? `particle-fly-${p.id} 1s ease-out forwards`
+                  : "none",
+              ["--dx" as string]: `${dir.dx}px`,
+              ["--dy" as string]: `${dir.dy}px`,
+            }}
+          />
+        );
+      })}
+
+      <div
+        className="relative z-10 text-center select-none transition-all duration-500"
+        style={{
+          opacity: phase === "expand" ? 0 : 1,
+          transform: phase === "expand" ? "scale(0.9)" : "scale(1)",
+        }}
+      >
+        <div
+          className="text-[80px] mb-6 transition-transform duration-300"
+          style={{
+            transform: phase === "glow" ? "scale(1.25)" : "scale(1)",
+            filter: phase === "glow" ? "drop-shadow(0 0 40px #22c55e)" : "none",
+          }}
+        >
+          ⚽
+        </div>
+
+        <div className="mb-2 text-xs tracking-[0.3em] text-white/40 uppercase">
+          2026 FIFA World Cup
+        </div>
+        <h1 className="text-4xl md:text-6xl font-black tracking-tight text-white mb-2">
+          世界杯预测
+        </h1>
+        <p className="text-white/40 text-sm mb-10">AI 驱动 · 真实赛程 · 深度分析</p>
+
+        <button
+          ref={buttonRef}
+          onClick={handleEnter}
+          disabled={phase !== "idle"}
+          className="relative group px-10 py-4 rounded-2xl text-base font-bold tracking-wide bg-linear-to-r from-pitch-bright to-data text-black transition-all duration-300 hover:scale-105 hover:shadow-[0_0_40px_rgba(34,197,94,0.5)] disabled:opacity-0 disabled:pointer-events-none overflow-hidden cursor-pointer"
+        >
+          <span className="relative z-10">开始预测</span>
+          <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-10 transition-opacity" />
+        </button>
+
+        <div className="mt-6 text-white/20 text-xs">Elo + 泊松 + 蒙特卡洛 + Qwen AI</div>
       </div>
-      <div className="min-w-0">
-        <div className="text-[10px] text-muted uppercase tracking-wider">{title}</div>
-        <div className={`text-base font-bold ${color} truncate`}>{value}</div>
-        <div className="text-[10px] text-muted truncate">{sub}</div>
-      </div>
+
+      <style>{`
+        @keyframes star-twinkle {
+          0%, 100% { opacity: 0.1; transform: scale(1); }
+          50% { opacity: 0.9; transform: scale(2); }
+        }
+        ${Array.from({ length: 24 }, (_, i) => `
+          @keyframes particle-fly-${i} {
+            to { transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))); opacity: 0; }
+          }
+        `).join("")}
+      `}</style>
     </div>
   );
-}
-
-function ModuleCard({ href, icon, title, desc, color }: { href: string; icon: string; title: string; desc: string; color: string }) {
-  return (
-    <Link href={href} className={`card p-5 bg-gradient-to-br ${color} hover:scale-[1.02] transition-transform group`}>
-      <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center mb-3 text-foreground/90">
-        <Icon path={icon} />
-      </div>
-      <div className="font-bold text-sm">{title}</div>
-      <div className="text-[11px] text-muted mt-1">{desc}</div>
-      <div className="text-[11px] text-data-bright mt-3 group-hover:translate-x-0.5 transition-transform">进入 →</div>
-    </Link>
-  );
-}
-
-function pickRivalry() {
-  const sorted = [...getHistory()].sort((a, b) => b.played - a.played);
-  return sorted[0];
 }
