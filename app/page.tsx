@@ -112,29 +112,51 @@ export default function HomePage() {
         </div>
 
         <div className="space-y-5">
-          <MetricCard title="最大冷门候选" value={upset ? `${getTeam(upset.teamId)?.flag} ${getTeam(upset.teamId)?.name}` : "—"} sub={upset ? `FIFA #${getTeam(upset.teamId)?.fifaRank} · ${(upset.pct * 100).toFixed(1)}% 夺冠` : ""} color="text-warn" icon="💣" />
-          <MetricCard title="最稳黑马" value={darkHorse ? `${getTeam(darkHorse.teamId)?.flag} ${getTeam(darkHorse.teamId)?.name}` : "—"} sub={darkHorse ? `FIFA #${getTeam(darkHorse.teamId)?.fifaRank} · ${(darkHorse.pct * 100).toFixed(1)}% 夺冠` : ""} color="text-pitch-bright" icon="🐴" />
+          {/* 最大冷门 — lightning bolt */}
+          <MetricCard title="最大冷门候选" value={upset ? `${getTeam(upset.teamId)?.flag} ${getTeam(upset.teamId)?.name}` : "—"} sub={upset ? `FIFA #${getTeam(upset.teamId)?.fifaRank} · ${(upset.pct * 100).toFixed(1)}% 夺冠` : ""} color="text-warn" icon="M13 2L3 14h8l-2 8 12-14h-8z" />
+          {/* 最稳黑马 — trending up */}
+          <MetricCard title="最稳黑马" value={darkHorse ? `${getTeam(darkHorse.teamId)?.flag} ${getTeam(darkHorse.teamId)?.name}` : "—"} sub={darkHorse ? `FIFA #${getTeam(darkHorse.teamId)?.fifaRank} · ${(darkHorse.pct * 100).toFixed(1)}% 夺冠` : ""} color="text-pitch-bright" icon="M3 17l6-6 4 4 8-8M21 7v6h-6" />
           {rivalry && (
-            <MetricCard title="经典对抗" value={`${getTeam(rivalry.teamA)?.flag} vs ${getTeam(rivalry.teamB)?.flag}`} sub={`${rivalry.played} 次交锋`} color="text-data" icon="⚔️" />
+            // 经典对抗 — crossed swords (X)
+            <MetricCard title="经典对抗" value={`${getTeam(rivalry.teamA)?.flag} vs ${getTeam(rivalry.teamB)?.flag}`} sub={`${rivalry.played} 次交锋`} color="text-data" icon="M5 5l14 14M19 5L5 19" />
           )}
         </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-        <ModuleCard href="/bracket" icon="🏆" title="赛程对阵图" desc="完整赛果预测含比分与推理链路" color="from-amber-500/20 to-transparent border-amber-500/30" />
-        <ModuleCard href="/predict" icon="📊" title="各阶段晋级预测" desc="蒙特卡洛模拟 48 队 6 阶段抵达概率" color="from-pitch/20 to-transparent border-pitch/30" />
-        <ModuleCard href="/relationships" icon="🕸" title="多维度图关系" desc="实力/攻防/风格/历史关系网络图谱" color="from-data/20 to-transparent border-data/30" />
-        <ModuleCard href="/matchup" icon="⚔️" title="竞争对抗设计" desc="两两对战泊松预测与战术克制分析" color="from-warn/20 to-transparent border-warn/30" />
-        <ModuleCard href="/mood" icon="🧠" title="球员心情分析" desc="情绪建模与对球队战力的影响" color="from-gold/20 to-transparent border-gold/30" />
+        <ModuleCard href="/bracket" icon="M4 4h16v16H4zM4 9h16M4 15h16M9 4v16M15 4v16" title="赛程对阵图" desc="完整赛果预测含比分与推理链路" color="from-amber-500/20 to-transparent border-amber-500/30" />
+        <ModuleCard href="/predict" icon="M4 18V8l8-5 8 5v10M9 18v-6h6v6" title="各阶段晋级预测" desc="蒙特卡洛模拟 48 队 6 阶段抵达概率" color="from-pitch/20 to-transparent border-pitch/30" />
+        <ModuleCard href="/relationships" icon="M12 2a10 10 0 100 20 10 10 0 000-20M2 12h20M12 2a15 15 0 010 20" title="多维度图关系" desc="实力/攻防/风格/历史关系网络图谱" color="from-data/20 to-transparent border-data/30" />
+        <ModuleCard href="/matchup" icon="M12 3v18M5 8l7-5 7 5M5 16l7 5 7-5" title="竞争对抗设计" desc="两两对战泊松预测与战术克制分析" color="from-warn/20 to-transparent border-warn/30" />
+        <ModuleCard href="/mood" icon="M9 11l3 3 8-8M21 12a9 9 0 11-6-8.5" title="球员心情分析" desc="情绪建模与对球队战力的影响" color="from-gold/20 to-transparent border-gold/30" />
       </div>
     </div>
+  );
+}
+
+function Icon({ path, size = 20 }: { path: string; size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d={path} />
+    </svg>
   );
 }
 
 function MetricCard({ title, value, sub, color, icon }: { title: string; value: string; sub: string; color: string; icon: string }) {
   return (
     <div className="card p-4 flex items-center gap-3">
-      <div className="w-10 h-10 rounded-lg bg-surface-2 flex items-center justify-center text-lg">{icon}</div>
+      <div className={`w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center ${color}`}>
+        <Icon path={icon} />
+      </div>
       <div className="min-w-0">
         <div className="text-[10px] text-muted uppercase tracking-wider">{title}</div>
         <div className={`text-base font-bold ${color} truncate`}>{value}</div>
@@ -146,11 +168,13 @@ function MetricCard({ title, value, sub, color, icon }: { title: string; value: 
 
 function ModuleCard({ href, icon, title, desc, color }: { href: string; icon: string; title: string; desc: string; color: string }) {
   return (
-    <Link href={href} className={`card p-5 bg-gradient-to-br ${color} hover:scale-[1.02] transition-transform`}>
-      <div className="text-2xl mb-2">{icon}</div>
+    <Link href={href} className={`card p-5 bg-gradient-to-br ${color} hover:scale-[1.02] transition-transform group`}>
+      <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center mb-3 text-foreground/90">
+        <Icon path={icon} />
+      </div>
       <div className="font-bold text-sm">{title}</div>
       <div className="text-[11px] text-muted mt-1">{desc}</div>
-      <div className="text-[11px] text-data mt-3">进入 →</div>
+      <div className="text-[11px] text-data-bright mt-3 group-hover:translate-x-0.5 transition-transform">进入 →</div>
     </Link>
   );
 }
