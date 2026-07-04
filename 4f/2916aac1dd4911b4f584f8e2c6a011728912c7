@@ -1,0 +1,19 @@
+app/data/page.tsx
+  s_b2bb477cc3bc7f::t_601ec97bed6663 356,361-379,381,385-393
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.9",
+  "base_commit_sha": "4f2916aac1dd4911b4f584f8e2c6a011728912c7",
+  "prompts": {},
+  "sessions": {
+    "s_b2bb477cc3bc7f": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "416cf002-30d1-48e9-b173-4e401d24d8ac",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "songdingan1 <songdingan1@xiaohongshu.com>"
+    }
+  }
+}
