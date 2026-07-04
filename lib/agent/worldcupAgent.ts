@@ -68,6 +68,7 @@ export interface WorldCupAgentResponse {
   reportSource: "qwen" | "local";
   model?: string;
   warnings: string[];
+  detailedResult: DetailedSimResult;
 }
 
 function tlaToId(tla: string): string {
@@ -262,6 +263,7 @@ function buildResponseShape(
     reportSource: reportMeta.source,
     ...(reportMeta.model ? { model: reportMeta.model } : {}),
     warnings,
+    detailedResult: detailed,
   };
 }
 
@@ -292,16 +294,23 @@ export async function runWorldCupAgent(
   const reportInput = { task, simCount, audit, monteCarlo: mc, detailed };
   const fallback = buildLocalReport(reportInput);
   const qwenPayload = buildQwenPrompt(reportInput);
+  // 从 detailed 结果中提取决赛信息，明确告知 Qwen 保持一致
+  const finalMatch = detailed.knockout.find((m) => m.stage === "final");
+  const finalNote = finalMatch
+    ? `\n\n⚠️ 重要：本次模型推演的决赛结果为 ${teamLabel(finalMatch.teamA)} ${finalMatch.scoreA}-${finalMatch.scoreB} ${teamLabel(finalMatch.winner)}（冠军），你在"决赛预测"段必须以此为准，不得与此矛盾。topChampions 是蒙特卡洛概率排名（多次模拟聚合），finalPrediction 是单次最优路径推演，两者可能不同属正常现象，请在报告中解释这一区别。`
+    : "";
+
   const qwen = await chatWithQwen(
     [
       {
         role: "system",
         content: `你是世界杯冠军预测 AI Agent，具备顶级赛事分析能力。基于结构化预测数据输出深度分析报告，要求：
-1. **数据驱动**：所有结论必须源自输入数据，不编造
-2. **层次清晰**：分"热门分析 → 黑马揭秘 → 决赛预测 → 不确定性"四段
-3. **专业洞察**：加入 Elo 差值、泊松期望进球等量化依据
-4. **可读性强**：使用 **加粗** 强调关键数据，语气自信有力
-5. **字数控制**：600 字以内，每段不超过 3 句`,
+1. **数据一致**："热门分析"用 topChampions 概率数据，"决赛预测"必须与 finalPrediction 完全一致
+2. **层次清晰**：分"热门分析 → 黑马揭秘 → 决赛路径 → 关键不确定性"四段
+3. **解释差异**：若夺冠概率第一的队不是决赛冠军，需解释"概率分布 vs 单次最优路径"的区别
+4. **专业洞察**：加入 Elo 差值、泊松期望进球等量化依据
+5. **可读性强**：使用 **加粗** 强调关键数据，语气自信有力
+6. **字数控制**：600 字以内${finalNote}`,
       },
       {
         role: "user",

@@ -1,11 +1,33 @@
 import { create } from "zustand";
 import { type MonteCarloResult } from "./prediction/monteCarlo";
+import { type DetailedSimResult } from "./prediction/detailedSim";
 import { teamMoodModifier } from "./mood/moodModel";
 import { TEAMS, TEAM_MAP } from "./data/teams";
 import { apiUrl } from "./basePath";
 import { computeViewpointMods, type Viewpoint, type SourceConfig } from "./viewpoints";
+import type { KnownMatchResult, LiveTournamentContext } from "./types";
 
 interface RawSourceConfig { source: string; weight: number | string; enabled: number | boolean }
+
+// 仅用于拉取赛程状态（tournamentStatus）供对阵图展示；模拟本身在后端跑。
+async function fetchLiveTournamentContext(): Promise<LiveTournamentContext | undefined> {
+  try {
+    const res = await fetch(apiUrl("/api/live-results"));
+    const data = (await res.json()) as {
+      available?: boolean;
+      matches?: KnownMatchResult[];
+      groupMatches?: KnownMatchResult[];
+      tournamentStatus?: unknown;
+    };
+    return {
+      knockoutMatches: data.available ? (data.matches ?? []) : [],
+      groupMatches: data.available ? (data.groupMatches ?? []) : [],
+      tournamentStatus: data.tournamentStatus,
+    };
+  } catch {
+    return undefined;
+  }
+}
 
 // Persist a completed simulation's champion to the backend (best-effort).
 function savePrediction(result: MonteCarloResult, simCount: number, useMood: boolean) {
@@ -44,11 +66,16 @@ export interface AgentChatMessage {
     reportSource?: string;
     source?: string;
     model?: string;
+    detailedResult?: DetailedSimResult;
   };
 }
 
 interface AppState {
   mcResult: MonteCarloResult | null;
+  detailedResult: DetailedSimResult | null;
+  detailedRunning: boolean;
+  liveContext: LiveTournamentContext | null;
+  liveContextLoaded: boolean;
   running: boolean;
   progress: { done: number; total: number };
   simCount: number;
@@ -59,6 +86,7 @@ interface AppState {
   agentMessages: AgentChatMessage[];
   agentInitialized: boolean;
   runSimulation: (n?: number) => void;
+  runDetailedSim: (force?: boolean) => Promise<void>;
   setSimCount: (n: number) => void;
   setUseMood: (v: boolean) => void;
   loadViewpoints: () => Promise<void>;
@@ -78,6 +106,10 @@ export function computeMoodMods(): Record<string, number> {
 
 export const useAppStore = create<AppState>((set, get) => ({
   mcResult: null,
+  detailedResult: null,
+  detailedRunning: false,
+  liveContext: null,
+  liveContextLoaded: false,
   running: false,
   progress: { done: 0, total: 0 },
   simCount: 3000,
@@ -103,6 +135,31 @@ export const useAppStore = create<AppState>((set, get) => ({
       })
       .catch(() => set({ running: false }));
   },
+  runDetailedSim: async (force = false) => {
+    // 已有结果且不强制重跑则跳过；正在跑时也跳过（防并发）
+    if ((get().detailedResult && !force) || get().detailedRunning) return;
+
+    set({ detailedRunning: true });
+
+    // 拉取赛程状态（tournamentStatus，供对阵图进度标签）——不参与模拟
+    if (!get().liveContextLoaded || force) {
+      const ctx = (await fetchLiveTournamentContext()) ?? null;
+      set({ liveContext: ctx, liveContextLoaded: true });
+    }
+
+    // 详细赛程模拟在后端运行（/api/simulate-bracket）
+    try {
+      const res = await fetch(apiUrl("/api/simulate-bracket"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ useMood: get().useMood }),
+      });
+      const data = (await res.json()) as { bracket?: DetailedSimResult };
+      set({ detailedResult: data.bracket ?? null, detailedRunning: false });
+    } catch {
+      set({ detailedRunning: false });
+    }
+  },
   setSimCount: (n) => set({ simCount: n }),
   setUseMood: (v) => set({ useMood: v }),
   setAgentMessages: (msgs) =>
@@ -112,6 +169,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   setAgentInitialized: (v) => set({ agentInitialized: v }),
   clearAgentChat: () => set({ agentMessages: [], agentInitialized: false }),
   setMcResult: (result) => set({ mcResult: result, running: false }),
+  // 同时暴露 setDetailedResult 供 agent 写入
+
   loadViewpoints: async () => {
     try {
       const [vpRes, cfgRes] = await Promise.all([

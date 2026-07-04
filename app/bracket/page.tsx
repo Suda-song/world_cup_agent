@@ -2,10 +2,10 @@
 
 import { useState, useEffect } from "react";
 import {
-  type DetailedSimResult,
   type MatchReasoning as MatchReason,
 } from "@/lib/prediction/detailedSim";
 import type { TournamentStatus } from "@/app/api/live-results/route";
+import { useAppStore } from "@/lib/store";
 import MatchReasoningPanel from "@/components/bracket/MatchReasoning";
 import { getTeam } from "@/lib/data/loader";
 import StageTimeline from "@/components/common/StageTimeline";
@@ -36,41 +36,36 @@ export default function BracketPage() {
   const [useMood, setUseMood] = useState(true);
   const [simKey, setSimKey] = useState(0);
   const [selectedMatch, setSelectedMatch] = useState<MatchReason | null>(null);
-  const [result, setResult] = useState<DetailedSimResult | null>(null);
   const [liveError, setLiveError] = useState<string | null>(null);
-  const [tournamentStatus, setTournamentStatus] =
-    useState<TournamentStatus | null>(null);
+  const [tournamentStatus, setTournamentStatus] = useState<TournamentStatus | null>(null);
 
+  const detailedResult = useAppStore((s) => s.detailedResult);
+  const runDetailedSim = useAppStore((s) => s.runDetailedSim);
+
+  // 首次进入触发模拟；simKey > 0 时强制重跑（手动点重新模拟）
+  // store 内 runDetailedSim 保证幂等：有结果且非 force 时立即跳过
   useEffect(() => {
-    let cancelled = false;
-    setResult(null);
+    const force = simKey > 0;
+    runDetailedSim(force).then(() => {
+      // 拉取 tournamentStatus 用于展示（模拟已在后端跑完）
+      const ctx = useAppStore.getState().liveContext;
+      if (!tournamentStatus && !ctx?.tournamentStatus) {
+        fetch(apiUrl("/api/live-results"))
+          .then((r) => r.json())
+          .then((data: { tournamentStatus?: TournamentStatus; error?: string; available?: boolean }) => {
+            if (data.tournamentStatus) setTournamentStatus(data.tournamentStatus);
+            if (!data.available && data.error) setLiveError(data.error);
+            else setLiveError(null);
+          })
+          .catch(() => {});
+      } else if (ctx?.tournamentStatus && !tournamentStatus) {
+        setTournamentStatus(ctx.tournamentStatus as TournamentStatus);
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [simKey]);
 
-    // 赛程状态（进度标签/真实赛果提示）来自 live-results，轻量无模拟
-    fetch(apiUrl("/api/live-results"))
-      .then((r) => r.json())
-      .then((data: { available: boolean; tournamentStatus?: TournamentStatus; error?: string }) => {
-        if (cancelled) return;
-        if (!data.available && data.error) setLiveError(data.error); else setLiveError(null);
-        if (data.tournamentStatus) setTournamentStatus(data.tournamentStatus);
-      })
-      .catch(() => {});
-
-    // 赛程模拟在后端运行（/api/simulate-bracket），含实时赛果+舆情权重+心情
-    fetch(apiUrl("/api/simulate-bracket"), {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ useMood }),
-    })
-      .then((r) => r.json())
-      .then((data: { bracket: DetailedSimResult }) => {
-        if (cancelled) return;
-        setResult(data.bracket);
-        setSelectedMatch(null);
-      })
-      .catch(() => {});
-
-    return () => { cancelled = true; };
-  }, [useMood, simKey]);
+  const result = detailedResult;
 
   if (!result) {
     return (
@@ -164,7 +159,7 @@ export default function BracketPage() {
       <StageTimeline />
 
       {/* 冠军展示 */}
-      <div className="rounded-2xl bg-gradient-to-r from-amber-500/10 via-pitch/10 to-transparent border border-amber-500/20 p-5 flex items-center gap-5">
+      <div className="rounded-2xl bg-linear-to-r from-amber-500/10 via-pitch/10 to-transparent border border-amber-500/20 p-5 flex items-center gap-5">
         <div className="text-5xl">🏆</div>
         <div className="flex-1">
           <div className="text-xs text-amber-400 font-semibold uppercase tracking-wider">

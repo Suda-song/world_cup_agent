@@ -77,6 +77,11 @@ export function buildQwenPrompt(input: AgentReportInput): string {
     {
       task: input.task,
       dataAudit: input.audit,
+      dataExplanation: {
+        topChampions: "蒙特卡洛概率：3000次完整赛程模拟聚合的夺冠概率排名，反映长期期望",
+        finalPrediction: "单次最优路径推演：基于Elo+泊松模型的确定性预测，反映最可能发生的具体赛程",
+        note: "两者数据来源不同，冠军概率排名第一的队未必是单次推演的冠军，这属正常现象",
+      },
       method: [
         "已完成比赛直接锁定真实结果",
         "未完成比赛使用泊松期望进球模型预测比分",
@@ -89,6 +94,7 @@ export function buildQwenPrompt(input: AgentReportInput): string {
             match: `${teamLabel(finalMatch.teamA)} vs ${teamLabel(finalMatch.teamB)}`,
             score: `${finalMatch.scoreA}-${finalMatch.scoreB}`,
             winner: teamLabel(finalMatch.winner),
+            note: "此为单次最优路径推演结果，与蒙特卡洛概率排名可能不同",
           }
         : null,
       championPath,

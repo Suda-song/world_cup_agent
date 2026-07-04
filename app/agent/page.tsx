@@ -42,8 +42,11 @@ function StatsPanel({ topChampions, finalPrediction, darkHorses }: {
     <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2">
       {/* 夺冠热门 */}
       <div className="rounded-xl border border-border bg-surface/60 p-3">
-        <div className="text-[10px] text-muted uppercase tracking-wider mb-2.5 flex items-center gap-1">
-          <span>📈</span> 夺冠概率 Top 5
+        <div className="flex items-center justify-between mb-2.5">
+          <div className="text-[10px] text-muted uppercase tracking-wider flex items-center gap-1">
+            <span>📈</span> 夺冠概率 Top 5
+          </div>
+          <span className="text-[9px] text-muted/50">蒙特卡洛</span>
         </div>
         {topChampions.slice(0, 5).map((c, i) => (
           <div key={c.team} className="flex items-center gap-2 py-0.5 group">
@@ -79,6 +82,7 @@ function StatsPanel({ topChampions, finalPrediction, darkHorses }: {
             <div className="mt-3 text-[11px] px-3 py-1 rounded-full bg-pitch/20 text-pitch-bright font-semibold inline-block">
               冠军 · {finalPrediction.winner}
             </div>
+            <div className="mt-2 text-[9px] text-amber-400/60">最优路径推演 · 非概率排名</div>
           </div>
         </div>
       )}
@@ -406,12 +410,12 @@ export default function AgentPage() {
         return next;
       });
 
-      // Agent 跑完后把 topChampions 写进 store，其他页面（晋级预测、仪表盘）直接消费，不再重复模拟
+      // Agent 跑完后把结果写进 store，其他页面（晋级预测、仪表盘、赛程对阵图）直接消费，不再重复模拟
       if (isFirstRun && meta?.topChampions) {
         const top = meta.topChampions as { team: string; probability: number; teamId?: string }[];
         const mcSnapshot: MonteCarloResult = {
           n: 3000,
-          topChampions: top.map((c, i) => ({
+          topChampions: top.map((c) => ({
             teamId: c.teamId ?? c.team,
             count: Math.round(c.probability * 3000),
             pct: c.probability,
@@ -422,6 +426,14 @@ export default function AgentPage() {
           probabilities: [],
         };
         setMcResult(mcSnapshot);
+        // 把 agent 服务端跑的 detailedResult 存入 store，bracket 页面直接复用（数据完全一致）
+        if (meta.detailedResult) {
+          useAppStore.setState({
+            detailedResult: meta.detailedResult as import("@/lib/prediction/detailedSim").DetailedSimResult,
+            detailedRunning: false,
+            liveContextLoaded: true,
+          });
+        }
       }
     } catch (err) {
       setMessages((prev) => {
@@ -495,7 +507,7 @@ export default function AgentPage() {
 
         {messages.map((msg, idx) => (
           <div key={idx} className={`flex gap-3 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-            {msg.role === "assistant" && (
+            {msg.role === "assistant" && (msg.content || !msg.streaming) && (
               <div className="w-8 h-8 rounded-xl bg-linear-to-br from-pitch-bright to-data flex items-center justify-center text-sm shrink-0 mt-1">⚽</div>
             )}
 
@@ -505,8 +517,8 @@ export default function AgentPage() {
                 <RunProgress currentPhase={msg.currentPhase} />
               )}
 
-              {/* 消息气泡 */}
-              {(() => {
+              {/* 消息气泡：内容为空时只显示进度条，不渲染空气泡 */}
+              {(msg.content || !msg.streaming) && (() => {
                 const { cleanContent, navLinks } = msg.role === "assistant" && !msg.streaming
                   ? parseNavTags(msg.content)
                   : { cleanContent: msg.content, navLinks: [] };
