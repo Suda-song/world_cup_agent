@@ -563,7 +563,7 @@ function XhsLiveCard() {
               playsInline
               preload="metadata"
             >
-              <source src="/videos/xhs-live-demo.mp4" type="video/mp4" />
+              <source src={apiUrl("/videos/xhs-live-demo.mp4")} type="video/mp4" />
               您的浏览器不支持视频播放
             </video>
             <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2 py-1 rounded-full bg-rose-500/80 backdrop-blur-sm">
