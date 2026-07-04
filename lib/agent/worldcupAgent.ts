@@ -294,11 +294,37 @@ export async function runWorldCupAgent(
   const reportInput = { task, simCount, audit, monteCarlo: mc, detailed };
   const fallback = buildLocalReport(reportInput);
   const qwenPayload = buildQwenPrompt(reportInput);
+
   // 从 detailed 结果中提取决赛信息，明确告知 Qwen 保持一致
   const finalMatch = detailed.knockout.find((m) => m.stage === "final");
   const finalNote = finalMatch
     ? `\n\n⚠️ 重要：本次模型推演的决赛结果为 ${teamLabel(finalMatch.teamA)} ${finalMatch.scoreA}-${finalMatch.scoreB} ${teamLabel(finalMatch.winner)}（冠军），你在"决赛预测"段必须以此为准，不得与此矛盾。topChampions 是蒙特卡洛概率排名（多次模拟聚合），finalPrediction 是单次最优路径推演，两者可能不同属正常现象，请在报告中解释这一区别。`
     : "";
+
+  // 舆情快照：把 viewpoints 聚合成简洁文字，注入首次报告 prompt
+  let sentimentNote = "";
+  if (viewpointData.viewpoints.length > 0) {
+    const vps = viewpointData.viewpoints;
+    const teamSentiment: Record<string, { pos: number; neg: number; topContent: string }> = {};
+    for (const v of vps.slice(0, 60)) {
+      if (v.scope === "team" && v.teamId) {
+        if (!teamSentiment[v.teamId]) teamSentiment[v.teamId] = { pos: 0, neg: 0, topContent: "" };
+        const e = teamSentiment[v.teamId];
+        if (v.stance === "positive") e.pos++;
+        else if (v.stance === "negative") e.neg++;
+        if (v.weight >= 4 && !e.topContent) e.topContent = v.content.slice(0, 25);
+      }
+    }
+    const top = Object.entries(teamSentiment)
+      .map(([id, s]) => ({ id, net: s.pos - s.neg, ...s }))
+      .filter((s) => Math.abs(s.net) >= 1)
+      .sort((a, b) => Math.abs(b.net) - Math.abs(a.net))
+      .slice(0, 6);
+    if (top.length > 0) {
+      sentimentNote = `\n\n【平台舆情参考（共 ${vps.length} 条，已融入修正系数）】\n` +
+        top.map((s) => `· ${teamLabel(s.id)}：${s.net > 0 ? "📈" : "📉"}净${Math.abs(s.net)}条${s.topContent ? `，代表声音："${s.topContent}"` : ""}`).join("\n");
+    }
+  }
 
   const qwen = await chatWithQwen(
     [
@@ -308,9 +334,9 @@ export async function runWorldCupAgent(
 1. **数据一致**："热门分析"用 topChampions 概率数据，"决赛预测"必须与 finalPrediction 完全一致
 2. **层次清晰**：分"热门分析 → 黑马揭秘 → 决赛路径 → 关键不确定性"四段
 3. **解释差异**：若夺冠概率第一的队不是决赛冠军，需解释"概率分布 vs 单次最优路径"的区别
-4. **专业洞察**：加入 Elo 差值、泊松期望进球等量化依据
+4. **专业洞察**：加入 Elo 差值、泊松期望进球等量化依据；若有舆情数据，在"热门分析"或"黑马揭秘"段引用平台声量作为佐证
 5. **可读性强**：使用 **加粗** 强调关键数据，语气自信有力
-6. **字数控制**：600 字以内${finalNote}`,
+6. **字数控制**：700 字以内${finalNote}${sentimentNote}`,
       },
       {
         role: "user",

@@ -1,8 +1,96 @@
 import { NextRequest } from "next/server";
 import { runWorldCupAgent, type WorldCupAgentResponse } from "@/lib/agent/worldcupAgent";
 import { chatWithQwen } from "@/lib/agent/qwen";
+import { getPool, isDbConfigured } from "@/lib/db";
+import type { RowDataPacket } from "mysql2";
+import type { Viewpoint } from "@/lib/viewpoints";
 
 export const dynamic = "force-dynamic";
+
+export interface SentimentTeamStat {
+  teamId: string;
+  pos: number;
+  neg: number;
+  neu: number;
+  net: number;
+  topSnippet: string;
+  sources: string[];
+}
+
+export interface SentimentSnapshot {
+  total: number;
+  teams: SentimentTeamStat[];
+  generalNotes: string[];
+  promptText: string; // 注入 Qwen system prompt 的文字
+}
+
+/** 从数据库拉取舆情，返回结构化数据（前端卡片用）+ 文字（Qwen prompt 用） */
+async function fetchSentimentSnapshot(): Promise<SentimentSnapshot | null> {
+  if (!isDbConfigured()) return null;
+  try {
+    const pool = getPool();
+    const [rows] = await pool.query<RowDataPacket[]>(
+      `SELECT scope, team_id AS teamId, category, stance, weight, content, source
+       FROM wc_viewpoints
+       ORDER BY created_at DESC
+       LIMIT 80`
+    );
+    const viewpoints = rows as Viewpoint[];
+    if (viewpoints.length === 0) return null;
+
+    const teamMap: Record<string, { pos: number; neg: number; neu: number; topSnippet: string; sources: Set<string> }> = {};
+    const generalNotes: string[] = [];
+
+    for (const v of viewpoints) {
+      const snippet = v.content.slice(0, 35);
+      const src = v.source ?? "其他";
+      if (v.scope === "general") {
+        generalNotes.push(`[${v.stance}] ${snippet}`);
+      } else if (v.teamId) {
+        if (!teamMap[v.teamId]) teamMap[v.teamId] = { pos: 0, neg: 0, neu: 0, topSnippet: "", sources: new Set() };
+        const e = teamMap[v.teamId];
+        if (v.stance === "positive") e.pos++;
+        else if (v.stance === "negative") e.neg++;
+        else e.neu++;
+        e.sources.add(src);
+        if (v.weight >= 4 && !e.topSnippet) e.topSnippet = snippet;
+      }
+    }
+
+    const teams: SentimentTeamStat[] = Object.entries(teamMap)
+      .map(([teamId, e]) => ({
+        teamId,
+        pos: e.pos,
+        neg: e.neg,
+        neu: e.neu,
+        net: e.pos - e.neg,
+        topSnippet: e.topSnippet,
+        sources: Array.from(e.sources),
+      }))
+      .sort((a, b) => Math.abs(b.net) - Math.abs(a.net))
+      .slice(0, 8);
+
+    // 文字版（给 Qwen）
+    const lines: string[] = ["【多源舆情快照（来自小红书/微博/知乎等平台）】"];
+    for (const t of teams) {
+      const trend = t.net > 0 ? "📈利好" : t.net < 0 ? "📉利空" : "➡️中性";
+      lines.push(`· ${t.teamId}：${trend}（+${t.pos}/-${t.neg}/~${t.neu}）${t.topSnippet ? ` — "${t.topSnippet}"` : ""}`);
+    }
+    if (generalNotes.length > 0) {
+      lines.push(`· 全局：${generalNotes.slice(0, 2).join("；")}`);
+    }
+    lines.push("（以上舆情已作为修正系数纳入模拟）");
+
+    return {
+      total: viewpoints.length,
+      teams,
+      generalNotes: generalNotes.slice(0, 3),
+      promptText: lines.join("\n"),
+    };
+  } catch {
+    return null;
+  }
+}
 
 export interface ChatMessage {
   role: "user" | "assistant";
@@ -155,10 +243,13 @@ export async function POST(req: NextRequest) {
           await new Promise((r) => setTimeout(r, 200));
           send({ delta: "🌐 **调用工具：赛程数据采集**\n`football-data.org → 获取小组赛 + 淘汰赛赛程`\n\n" });
 
-          // Step 2: 执行蒙特卡洛模拟（真正跑计算）
+          // Step 2: 执行蒙特卡洛模拟（真正跑计算）+ 并发拉取舆情
           send({ phase: "sim" });
-          const agentResult = await runWorldCupAgent({ task: "预测世界杯冠军", simCount: 3000 });
-          send({ delta: `⚙️ **调用工具：蒙特卡洛模拟引擎**\n\`已完成 3,000 次完整赛程模拟 · 锁定 ${agentResult.dataAudit.finishedMatchCount} 场真实赛果\`\n\n` });
+          const [agentResult, firstRunSentiment] = await Promise.all([
+            runWorldCupAgent({ task: "预测世界杯冠军", simCount: 3000 }),
+            fetchSentimentSnapshot(),
+          ]);
+          send({ delta: `⚙️ **调用工具：蒙特卡洛模拟引擎**\n\`已完成 3,000 次完整赛程模拟 · 锁定 ${agentResult.dataAudit.finishedMatchCount} 场真实赛果${firstRunSentiment ? ` · 融合 ${firstRunSentiment.total} 条平台舆情` : ""}\`\n\n` });
 
           // Step 3: 小组赛分析
           send({ phase: "group" });
@@ -189,6 +280,10 @@ export async function POST(req: NextRequest) {
             reasoningChain: agentResult.reasoningChain,
             // 完整 detailedResult 供 bracket/predict 页面复用，避免重新模拟产生数据不一致
             detailedResult: agentResult.detailedResult,
+            // 舆情快照（去掉 promptText 以减小 payload 体积）
+            sentimentSnapshot: firstRunSentiment
+              ? { total: firstRunSentiment.total, teams: firstRunSentiment.teams, generalNotes: firstRunSentiment.generalNotes }
+              : null,
           };
 
           send({ done: true, meta });
@@ -208,6 +303,10 @@ export async function POST(req: NextRequest) {
           (m) => m.role === "assistant" && m.meta,
         );
         const snapshot = firstWithMeta?.meta ?? null;
+
+        // 拉取舆情（结构化数据给前端卡片，文字给 Qwen prompt）
+        const sentimentSnap = await fetchSentimentSnapshot();
+        const sentimentContext = sentimentSnap?.promptText ?? "";
 
         // 构建包含实际预测数据的系统 prompt
         let systemPrompt: string;
@@ -245,17 +344,18 @@ export async function POST(req: NextRequest) {
 【冠军路径】${path}
 【黑马候选】${dark}
 【数据来源】football-data.org 真实赛程 + Elo+泊松+蒙特卡洛模拟
-
+${sentimentContext ? `\n${sentimentContext}` : ""}
 回答规则：
 - 基于以上真实数据作答，数据和结论必须一致
+- 如有舆情数据，可在回答中引用平台声量作为辅助佐证（如"小红书/微博上对X队的利好舆情较多"）
 - 回答要专业、有洞察力，加入你对局势的判断
 - 适度使用 **加粗** 强调关键信息
 - 回答简洁有力，聚焦用户问题，不要重复完整报告
-- 如用户问某支球队，结合其 Elo 评分、历史表现和模拟概率深度分析
+- 如用户问某支球队，结合其 Elo 评分、历史表现、模拟概率及平台舆情深度分析
 
 ${NAV_TOOLS}`;
         } else {
-          systemPrompt = `你是世界杯冠军预测 AI Agent，请用中文专业回答用户关于 2026 FIFA 世界杯的问题。回答要有洞察力，适度使用 **加粗** 强调重点。\n${NAV_TOOLS}`;
+          systemPrompt = `你是世界杯冠军预测 AI Agent，请用中文专业回答用户关于 2026 FIFA 世界杯的问题。回答要有洞察力，适度使用 **加粗** 强调重点。\n${sentimentContext ? `\n${sentimentContext}\n` : ""}${NAV_TOOLS}`;
         }
 
         const qwenMessages: { role: "system" | "user" | "assistant"; content: string }[] = [

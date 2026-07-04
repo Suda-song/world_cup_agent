@@ -7,6 +7,7 @@ import { apiUrl } from "@/lib/basePath";
 import { useAppStore, type AgentChatMessage, type MatchCardPayload } from "@/lib/store";
 import { getTeam } from "@/lib/data/loader";
 import TaskQueue, { type Task, type TaskItem } from "@/components/agent/TaskQueue";
+import MiniMarkdown from "@/components/common/MiniMarkdown";
 
 // 解析 Qwen 插入的 [NAV:/path:label] 跳转标记
 const NAV_RE = /\[NAV:([^:]+):([^\]]+)\]/g;
@@ -461,25 +462,29 @@ export default function FloatingAgent() {
                     </div>
                   )}
 
-                  {/* 消息气泡（assistant 带 matchCard 时只有流式内容，无 matchCard 则正常显示） */}
+                  {/* 消息气泡 */}
                   {(msg.role === "user" || msg.content || msg.streaming) && (() => {
                     const { clean, links } = msg.role === "assistant" && !msg.streaming
                       ? parseNav(msg.content) : { clean: msg.content, links: [] };
-                    // assistant matchCard 消息：streaming 且内容为空时显示"分析中..."
-                    const showContent = msg.role === "assistant" && msg.meta?.matchCard && !msg.content && msg.streaming
-                      ? "" : clean;
                     if (msg.role === "assistant" && msg.meta?.matchCard && !msg.content && !msg.streaming) return null;
+                    const isAssistant = msg.role === "assistant";
+                    const hasMatchCard = !!msg.meta?.matchCard;
+
                     return (
                       <div
-                        className={`inline-block max-w-[96%] rounded-2xl px-3 py-2 text-xs leading-relaxed whitespace-pre-line ${
-                          msg.role === "user"
-                            ? "bg-pitch/20 border border-pitch/30 text-foreground"
-                            : msg.meta?.matchCard
+                        className={`rounded-2xl px-3 py-2 text-xs ${
+                          !isAssistant
+                            ? "inline-block max-w-[96%] bg-pitch/20 border border-pitch/30 text-foreground leading-relaxed"
+                            : hasMatchCard
                               ? "bg-surface-2/60 border border-border/40 text-foreground w-full"
-                              : "bg-surface-2 text-foreground"
+                              : "bg-surface-2 text-foreground w-full"
                         }`}
                       >
-                        {showContent}
+                        {isAssistant && clean ? (
+                          <MiniMarkdown content={clean} compact />
+                        ) : (
+                          <span className="whitespace-pre-line">{clean}</span>
+                        )}
                         {msg.streaming && (
                           <span className="inline-block w-0.5 h-3 bg-pitch-bright ml-0.5 animate-pulse align-middle" />
                         )}
@@ -509,6 +514,30 @@ export default function FloatingAgent() {
                       ))}
                     </div>
                   )}
+                  {/* 舆情快照摘要 */}
+                  {msg.role === "assistant" && !msg.streaming && msg.meta?.sentimentSnapshot &&
+                    (() => {
+                      const snap = msg.meta.sentimentSnapshot as { total: number; teams: { teamId: string; net: number }[] };
+                      if (!snap || snap.teams.length === 0) return null;
+                      const top3 = snap.teams.slice(0, 3);
+                      return (
+                        <div className="mt-1.5 max-w-[96%] rounded-xl border border-violet-500/20 bg-violet-500/5 px-3 py-2">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-[10px] text-violet-300">📡 舆情快照 · {snap.total} 条</span>
+                            <a href="/data" className="text-[9px] text-violet-400/70 hover:text-violet-300">详情 →</a>
+                          </div>
+                          {top3.map((t) => (
+                            <div key={t.teamId} className="flex justify-between text-[10px]">
+                              <span className="text-muted/70">{t.teamId}</span>
+                              <span className={t.net > 0 ? "text-pitch-bright" : t.net < 0 ? "text-red-400" : "text-muted"}>
+                                {t.net > 0 ? "📈" : t.net < 0 ? "📉" : "➡️"} {t.net > 0 ? "+" : ""}{t.net}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })()
+                  }
                 </div>
               ))
             )}

@@ -13,6 +13,8 @@ type ChampionPathItem = { stage: string; match: string; winner: string; state: s
 type TopChampion = { team: string; probability: number };
 type DarkHorse = { team: string; probability: number; fifaRank: number };
 type FinalPrediction = { teamA: string; teamB: string; score: string; winner: string } | null;
+type SentimentTeam = { teamId: string; pos: number; neg: number; neu: number; net: number; topSnippet: string; sources: string[] };
+type SentimentSnapshot = { total: number; teams: SentimentTeam[]; generalNotes: string[] };
 
 const QUICK_QUESTIONS = [
   "为什么这支队最有可能夺冠？",
@@ -149,6 +151,154 @@ function ChampionPathCard({ path }: { path: ChampionPathItem[] }) {
             </div>
           );
         })}
+      </div>
+    </div>
+  );
+}
+
+function SentimentPanel({ snap }: { snap: SentimentSnapshot }) {
+  const bullish = snap.teams.filter((t) => t.net > 0).sort((a, b) => b.net - a.net).slice(0, 3);
+  const bearish = snap.teams.filter((t) => t.net < 0).sort((a, b) => a.net - b.net).slice(0, 2);
+  const maxNet = Math.max(...snap.teams.map((t) => Math.abs(t.net)), 1);
+
+  return (
+    <div className="mt-4 rounded-2xl overflow-hidden border border-violet-500/25 bg-linear-to-br from-violet-950/60 via-violet-900/20 to-transparent">
+      {/* 标题栏 */}
+      <div className="flex items-center justify-between px-4 py-3 bg-violet-500/10 border-b border-violet-500/20">
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-lg bg-violet-500/20 flex items-center justify-center text-base">📡</div>
+          <div>
+            <div className="text-sm font-semibold text-violet-200">多源舆情分析</div>
+            <div className="text-[10px] text-violet-400/70">小红书 · 微博 · 知乎平台采集</div>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-[11px] px-2 py-0.5 rounded-full bg-violet-500/20 text-violet-300 font-mono">
+            {snap.total} 条数据
+          </span>
+          <a href="/data" className="text-[10px] px-2 py-1 rounded-lg border border-violet-500/30 text-violet-400 hover:bg-violet-500/10 transition-colors">
+            查看详情 →
+          </a>
+        </div>
+      </div>
+
+      <div className="px-4 py-3 space-y-4">
+        {/* 利好 / 利空 两栏 */}
+        <div className="grid grid-cols-2 gap-3">
+          {/* 利好榜 */}
+          <div className="rounded-xl bg-pitch-bright/5 border border-pitch-bright/15 p-3">
+            <div className="flex items-center gap-1 mb-2">
+              <span className="text-xs">📈</span>
+              <span className="text-[11px] font-semibold text-pitch-bright">舆情利好</span>
+            </div>
+            {bullish.length === 0 ? (
+              <div className="text-[10px] text-muted/50">暂无数据</div>
+            ) : (
+              <div className="space-y-2">
+                {bullish.map((t, i) => (
+                  <div key={t.teamId} className="space-y-0.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] text-foreground/80 flex items-center gap-1">
+                        <span className="text-[9px] w-3.5 h-3.5 rounded-full bg-pitch-bright/20 text-pitch-bright flex items-center justify-center font-bold">{i + 1}</span>
+                        {t.teamId}
+                      </span>
+                      <span className="text-[11px] font-mono text-pitch-bright font-semibold">+{t.net}</span>
+                    </div>
+                    <div className="h-1 rounded-full bg-surface-2/60 overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-pitch-bright/60"
+                        style={{ width: `${Math.round((t.net / maxNet) * 100)}%` }}
+                      />
+                    </div>
+                    {t.topSnippet && (
+                      <div className="text-[9px] text-muted/60 leading-tight truncate">"{t.topSnippet}"</div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* 利空榜 */}
+          <div className="rounded-xl bg-red-500/5 border border-red-500/15 p-3">
+            <div className="flex items-center gap-1 mb-2">
+              <span className="text-xs">📉</span>
+              <span className="text-[11px] font-semibold text-red-400">舆情利空</span>
+            </div>
+            {bearish.length === 0 ? (
+              <div className="text-[10px] text-muted/50">暂无数据</div>
+            ) : (
+              <div className="space-y-2">
+                {bearish.map((t, i) => (
+                  <div key={t.teamId} className="space-y-0.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] text-foreground/80 flex items-center gap-1">
+                        <span className="text-[9px] w-3.5 h-3.5 rounded-full bg-red-500/20 text-red-400 flex items-center justify-center font-bold">{i + 1}</span>
+                        {t.teamId}
+                      </span>
+                      <span className="text-[11px] font-mono text-red-400 font-semibold">{t.net}</span>
+                    </div>
+                    <div className="h-1 rounded-full bg-surface-2/60 overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-red-400/50"
+                        style={{ width: `${Math.round((Math.abs(t.net) / maxNet) * 100)}%` }}
+                      />
+                    </div>
+                    {t.topSnippet && (
+                      <div className="text-[9px] text-muted/60 leading-tight truncate">"{t.topSnippet}"</div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* 全量球队声量条 */}
+        <div>
+          <div className="text-[10px] text-muted/60 mb-2 uppercase tracking-wider">声量分布 · Top {snap.teams.length} 队</div>
+          <div className="space-y-1.5">
+            {snap.teams.slice(0, 6).map((t) => {
+              const total = t.pos + t.neg + t.neu || 1;
+              const posW = Math.round((t.pos / total) * 100);
+              const negW = Math.round((t.neg / total) * 100);
+              const neuW = 100 - posW - negW;
+              return (
+                <div key={t.teamId} className="flex items-center gap-2">
+                  <span className="text-[10px] text-muted/70 w-14 truncate shrink-0">{t.teamId}</span>
+                  <div className="flex-1 flex h-2 rounded-full overflow-hidden bg-surface-2/40 gap-px">
+                    <div className="bg-pitch-bright/55 transition-all" style={{ width: `${posW}%` }} />
+                    <div className="bg-surface-2/80" style={{ width: `${neuW}%` }} />
+                    <div className="bg-red-400/50 transition-all" style={{ width: `${negW}%` }} />
+                  </div>
+                  <div className="flex gap-1.5 text-[9px] font-mono shrink-0 w-20 justify-end">
+                    <span className="text-pitch-bright/80">+{t.pos}</span>
+                    <span className="text-muted/40">/</span>
+                    <span className="text-red-400/70">-{t.neg}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* 全局舆情备注 */}
+        {snap.generalNotes.length > 0 && (
+          <div className="rounded-lg bg-surface-2/30 border border-border/30 px-3 py-2">
+            <div className="text-[9px] text-muted/50 uppercase tracking-wider mb-1">全局观点</div>
+            <div className="text-[10px] text-muted/70 leading-relaxed">
+              {snap.generalNotes.slice(0, 2).join("；")}
+            </div>
+          </div>
+        )}
+
+        <div className="flex items-center justify-between text-[9px] text-muted/40">
+          <span>📊 舆情声量已作为修正系数融入本次模拟计算</span>
+          <span className="flex gap-2">
+            <span className="flex items-center gap-0.5"><span className="w-2 h-1 rounded-sm bg-pitch-bright/50 inline-block"/>利好</span>
+            <span className="flex items-center gap-0.5"><span className="w-2 h-1 rounded-sm bg-red-400/50 inline-block"/>利空</span>
+          </span>
+        </div>
       </div>
     </div>
   );
@@ -602,6 +752,9 @@ export default function AgentPage() {
                   )}
                   {msg.meta.reasoningChain && (msg.meta.reasoningChain as string[]).length > 0 && (
                     <ReasoningChain steps={msg.meta.reasoningChain as string[]} />
+                  )}
+                  {msg.meta.sentimentSnapshot && (msg.meta.sentimentSnapshot as SentimentSnapshot).teams.length > 0 && (
+                    <SentimentPanel snap={msg.meta.sentimentSnapshot as SentimentSnapshot} />
                   )}
                   {/* 探索更多功能入口 */}
                   <ExploreModules />

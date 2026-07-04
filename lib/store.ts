@@ -68,6 +68,11 @@ export interface AgentChatMessage {
     model?: string;
     detailedResult?: DetailedSimResult;
     matchCard?: MatchCardPayload;
+    sentimentSnapshot?: {
+      total: number;
+      teams: { teamId: string; pos: number; neg: number; neu: number; net: number; topSnippet: string; sources: string[] }[];
+      generalNotes: string[];
+    } | null;
   };
 }
 
