@@ -1,0 +1,26 @@
+components/agent/FloatingAgent.tsx
+  s_b2bb477cc3bc7f::t_b69ff29ae8ca85 318
+  s_b2bb477cc3bc7f::t_77f93cc11aa99c 225-227
+components/bracket/MatchReasoning.tsx
+  s_b2bb477cc3bc7f::t_2817765ea5bcd0 157
+  s_b2bb477cc3bc7f::t_af9700489d97f2 74
+app/bracket/page.tsx
+  s_b2bb477cc3bc7f::t_44a7a90c5d60ed 8
+  s_b2bb477cc3bc7f::t_622075fca19da6 301-308,318-321,329-330,370
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.9",
+  "base_commit_sha": "1b5d55379fc7e4f0c8faa5c03641b2593e1dfd34",
+  "prompts": {},
+  "sessions": {
+    "s_b2bb477cc3bc7f": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "416cf002-30d1-48e9-b173-4e401d24d8ac",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "songdingan1 <songdingan1@xiaohongshu.com>"
+    }
+  }
+}
