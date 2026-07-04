@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { apiUrl } from "@/lib/basePath";
 import { useAppStore, type AgentChatMessage, type MatchCardPayload } from "@/lib/store";
 import { getTeam } from "@/lib/data/loader";
+import TaskQueue, { type Task, type TaskItem } from "@/components/agent/TaskQueue";
 
 // 解析 Qwen 插入的 [NAV:/path:label] 跳转标记
 const NAV_RE = /\[NAV:([^:]+):([^\]]+)\]/g;
@@ -177,19 +178,19 @@ function MatchDataCard({ card }: { card: MatchCardPayload }) {
 
 const QUICK_TASKS = ["为什么这支队最有可能夺冠？", "本届最大黑马是谁？", "决赛预测是什么？"];
 
-type QueueItem =
-  | { type: "text"; content: string }
-  | { type: "match"; card: MatchCardPayload };
+let taskIdCounter = 0;
+function nextTaskId() { return `t-${++taskIdCounter}`; }
 
 export default function FloatingAgent() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  // 待发送消息队列（仅展示用，不含正在发送的那条）
-  const [pendingQueue, setPendingQueue] = useState<QueueItem[]>([]);
-  const queueRef = useRef<QueueItem[]>([]);
+  // 任务队列（含状态，用于 TaskQueue 组件展示）
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const queueRef = useRef<TaskItem[]>([]);
   const loadingRef = useRef(false);
+  const currentTaskIdRef = useRef<string | null>(null);
 
   // 与 /agent 页面共享同一份消息状态
   const messages = useAppStore((s) => s.agentMessages);
@@ -200,25 +201,48 @@ export default function FloatingAgent() {
 
   const bottomRef = useRef<HTMLDivElement>(null);
 
+  /** 把一个 TaskItem 标记为 running，更新 tasks 列表 */
+  const markRunning = (id: string) => {
+    currentTaskIdRef.current = id;
+    setTasks((prev) => prev.map((t) => t.id === id ? { ...t, status: "running" } : t));
+  };
+
+  /** 把当前 running 任务标记为 done */
+  const markDone = () => {
+    const id = currentTaskIdRef.current;
+    if (!id) return;
+    setTasks((prev) => prev.map((t) => t.id === id ? { ...t, status: "done" } : t));
+    // 1 秒后从列表移除已完成任务（保留短暂的 done 视觉反馈）
+    setTimeout(() => {
+      setTasks((prev) => prev.filter((t) => t.id !== id));
+    }, 1000);
+    currentTaskIdRef.current = null;
+  };
+
   /** 入队一条消息，如果当前没有请求在跑则立即发送，否则排队等待 */
-  const enqueue = (item: QueueItem) => {
+  const enqueue = (item: TaskItem) => {
+    const id = nextTaskId();
     if (!loadingRef.current) {
-      // 直接发
+      // 直接发，状态直接 running
+      setTasks((prev) => [...prev, { id, item, status: "running" }]);
+      currentTaskIdRef.current = id;
       if (item.type === "text") _sendMessage(item.content);
       else _sendMatchAnalysis(item.card);
     } else {
-      // 追加到队列并更新显示
-      queueRef.current = [...queueRef.current, item];
-      setPendingQueue([...queueRef.current]);
+      // 排队等待
+      queueRef.current = [...queueRef.current, { ...item, _id: id } as TaskItem & { _id: string }];
+      setTasks((prev) => [...prev, { id, item, status: "pending" }]);
     }
   };
 
-  /** 当前请求完成后，取出队列里的下一条 */
+  /** 当前请求完成后标记 done，并取出队列里的下一条 */
   const drainQueue = () => {
+    markDone(); // 先标记当前任务完成
     if (queueRef.current.length === 0) return;
-    const [next, ...rest] = queueRef.current;
+    const [next, ...rest] = queueRef.current as (TaskItem & { _id: string })[];
     queueRef.current = rest;
-    setPendingQueue([...rest]);
+    const id = next._id;
+    markRunning(id);
     if (next.type === "text") _sendMessage(next.content);
     else _sendMatchAnalysis(next.card);
   };
@@ -312,7 +336,7 @@ export default function FloatingAgent() {
     } finally {
       loadingRef.current = false;
       setLoading(false);
-      drainQueue();
+      drainQueue(); // drainQueue 内部调 markDone
     }
   };
 
@@ -498,28 +522,19 @@ export default function FloatingAgent() {
                 AI 分析中…
               </div>
             )}
-            {/* 待发送队列 */}
-            {pendingQueue.length > 0 && (
-              <div className="space-y-1">
-                {pendingQueue.map((item, i) => (
-                  <div key={i} className="flex items-center gap-2 rounded-xl border border-border/40 bg-surface-2/50 px-3 py-2 text-[10px] text-muted">
-                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400/70 animate-pulse shrink-0" />
-                    <span className="truncate flex-1">
-                      {item.type === "match"
-                        ? `⏳ 待分析：${getTeam(item.card.teamA)?.name ?? item.card.teamA} vs ${getTeam(item.card.teamB)?.name ?? item.card.teamB}`
-                        : `⏳ 待发送：${item.content.slice(0, 30)}${item.content.length > 30 ? "…" : ""}`
-                      }
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
             <div ref={bottomRef} />
           </div>
 
+          {/* 任务队列 TodoList */}
+          {tasks.length > 0 && (
+            <div className="px-3 pt-2 shrink-0">
+              <TaskQueue tasks={tasks} maxVisible={4} />
+            </div>
+          )}
+
           {/* 快捷 + 输入 */}
           <div className="border-t border-border px-4 py-3 shrink-0">
-            {!isEmpty && (
+            {!isEmpty && tasks.length === 0 && (
               <div className="mb-2 flex flex-wrap gap-1.5">
                 {QUICK_TASKS.map((task) => (
                   <button
@@ -540,16 +555,22 @@ export default function FloatingAgent() {
               <input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                disabled={loading || !agentInitialized}
-                placeholder={agentInitialized ? "追问任何世界杯问题…" : "请先前往 Agent 页面运行预测"}
+                disabled={!agentInitialized}
+                placeholder={
+                  !agentInitialized
+                    ? "请先前往 Agent 页面运行预测"
+                    : loading
+                      ? "AI 分析中，输入内容将自动排队…"
+                      : "追问任何世界杯问题…"
+                }
                 className="min-w-0 flex-1 rounded-xl border border-border bg-surface-2 px-3 py-2 text-xs outline-none focus:border-pitch disabled:opacity-50"
               />
               <button
                 type="submit"
-                disabled={loading || !input.trim() || !agentInitialized}
+                disabled={!input.trim() || !agentInitialized}
                 className="rounded-xl bg-pitch-bright px-3 py-2 text-xs font-semibold text-black disabled:opacity-40"
               >
-                发送
+                {loading ? "排队" : "发送"}
               </button>
             </form>
             <Link

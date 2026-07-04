@@ -6,6 +6,7 @@ import { apiUrl } from "@/lib/basePath";
 import { useAppStore, type AgentChatMessage } from "@/lib/store";
 import type { MonteCarloResult } from "@/lib/prediction/monteCarlo";
 import MiniMarkdown from "@/components/common/MiniMarkdown";
+import TaskQueue, { type Task } from "@/components/agent/TaskQueue";
 
 // ─── 类型 ────────────────────────────────────────────
 type ChampionPathItem = { stage: string; match: string; winner: string; state: string };
@@ -337,9 +338,12 @@ export default function AgentPage() {
 
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [pendingQueue, setPendingQueue] = useState<string[]>([]);
-  const queueRef = useRef<string[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const queueRef = useRef<{ content: string; id: string }[]>([]);
   const loadingRef = useRef(false);
+  const currentTaskIdRef = useRef<string | null>(null);
+  let _taskCounter = 0;
+  const nextId = () => `ag-${++_taskCounter}`;
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -357,13 +361,25 @@ export default function AgentPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  /** 标记当前任务完成（短暂显示后移除） */
+  const markDone = () => {
+    const id = currentTaskIdRef.current;
+    if (!id) return;
+    setTasks((prev) => prev.map((t) => t.id === id ? { ...t, status: "done" } : t));
+    setTimeout(() => setTasks((prev) => prev.filter((t) => t.id !== id)), 1000);
+    currentTaskIdRef.current = null;
+  };
+
   /** 当前请求完成后取出队列里的下一条文本消息 */
   const drainQueue = () => {
+    markDone();
     if (queueRef.current.length === 0) return;
     const [next, ...rest] = queueRef.current;
     queueRef.current = rest;
-    setPendingQueue([...rest]);
-    _sendMessage(next);
+    // 标记下一条为 running
+    currentTaskIdRef.current = next.id;
+    setTasks((prev) => prev.map((t) => t.id === next.id ? { ...t, status: "running" } : t));
+    _sendMessage(next.content);
   };
 
   const triggerChat = async (history: AgentChatMessage[], isFirstRun = false) => {
@@ -478,11 +494,14 @@ export default function AgentPage() {
     const content = (text ?? input).trim();
     if (!content) return;
     setInput("");
+    const id = nextId();
     if (!loadingRef.current) {
+      currentTaskIdRef.current = id;
+      setTasks((prev) => [...prev, { id, item: { type: "text", content }, status: "running" }]);
       _sendMessage(content);
     } else {
-      queueRef.current = [...queueRef.current, content];
-      setPendingQueue([...queueRef.current]);
+      queueRef.current = [...queueRef.current, { content, id }];
+      setTasks((prev) => [...prev, { id, item: { type: "text", content }, status: "pending" }]);
     }
   };
 
@@ -606,22 +625,11 @@ export default function AgentPage() {
             )}
           </div>
         ))}
-        {/* 待发送队列 */}
-        {pendingQueue.length > 0 && (
-          <div className="space-y-1 px-1">
-            {pendingQueue.map((content, i) => (
-              <div key={i} className="flex items-center gap-2 rounded-xl border border-border/40 bg-surface-2/50 px-4 py-2 text-xs text-muted">
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-400/70 animate-pulse shrink-0" />
-                <span className="truncate flex-1">⏳ 待发送：{content.slice(0, 40)}{content.length > 40 ? "…" : ""}</span>
-              </div>
-            ))}
-          </div>
-        )}
         <div ref={bottomRef} />
       </div>
 
-      {/* 快捷问题 */}
-      {messages.length > 0 && !loading && (
+      {/* 快捷问题（无任务队列时显示） */}
+      {messages.length > 0 && !loading && tasks.length === 0 && (
         <div className="shrink-0 px-4 pb-1 flex gap-2 overflow-x-auto" style={{ scrollbarWidth: "none" }}>
           {QUICK_QUESTIONS.map((q) => (
             <button key={q} onClick={() => sendMessage(q)}
@@ -629,6 +637,13 @@ export default function AgentPage() {
               {q}
             </button>
           ))}
+        </div>
+      )}
+
+      {/* 任务队列 TodoList */}
+      {tasks.length > 0 && (
+        <div className="shrink-0 px-4 pb-2">
+          <TaskQueue tasks={tasks} maxVisible={5} />
         </div>
       )}
 
@@ -640,15 +655,14 @@ export default function AgentPage() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            disabled={loading}
             rows={1}
-            placeholder={loading ? "Agent 正在推演…" : "追问任何关于世界杯的问题…"}
-            className="flex-1 resize-none rounded-2xl border border-border bg-surface-2 px-4 py-3 text-sm outline-none focus:border-pitch/60 transition-colors disabled:opacity-50 max-h-32"
+            placeholder={loading ? "AI 推演中，输入内容将自动排队…" : "追问任何关于世界杯的问题…"}
+            className="flex-1 resize-none rounded-2xl border border-border bg-surface-2 px-4 py-3 text-sm outline-none focus:border-pitch/60 transition-colors max-h-32"
             style={{ scrollbarWidth: "none" }}
           />
           <button
             onClick={() => sendMessage()}
-            disabled={loading || !input.trim()}
+            disabled={!input.trim()}
             className="w-11 h-11 rounded-2xl bg-pitch-bright text-black flex items-center justify-center hover:bg-pitch transition-colors disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
           >
             {loading ? (
