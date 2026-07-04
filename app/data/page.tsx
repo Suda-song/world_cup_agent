@@ -336,8 +336,6 @@ const XHS_LIVE_URL =
   "https://www.xiaohongshu.com/livestream/570347737968922116?source=web_search_onebox&xsec_token=ABCu7j15KJ8R3qzeGm2ZiWPCbqcBuCRuDZppTO2w-1aOeHPSsVYyso5UofX6qja-re&keyword=%E8%BF%90%E5%8A%A8%E8%96%AF";
 
 function XhsLiveCard() {
-  const [iframeError, setIframeError] = useState(false);
-
   return (
     <div className="card p-0 overflow-hidden border-rose-500/20">
       {/* 头部 */}
@@ -355,55 +353,44 @@ function XhsLiveCard() {
           rel="noopener noreferrer"
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-500/15 border border-rose-500/25 text-xs text-rose-300 hover:bg-rose-500/25 transition-colors"
         >
-          <span>在新标签页打开</span>
+          <span>前往直播页</span>
           <span>↗</span>
         </a>
       </div>
 
-      {/* iframe 区域 */}
-      {iframeError ? (
-        /* 降级展示：小红书拒绝被 iframe 嵌入时 */
-        <div className="flex flex-col items-center justify-center h-64 bg-surface-2/30 gap-4">
-          <div className="text-4xl">🔒</div>
-          <div className="text-sm text-muted text-center max-w-xs">
-            小红书限制了页面嵌入，请点击右上角链接在新标签页查看完整直播内容
-          </div>
-          <a
-            href={XHS_LIVE_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-4 py-2 rounded-xl bg-rose-500/20 border border-rose-500/30 text-sm text-rose-300 hover:bg-rose-500/30 transition-colors"
-          >
-            前往小红书直播 →
-          </a>
+      {/* 视频播放区 */}
+      <div className="relative w-full bg-black" style={{ paddingBottom: "56.25%" }}>
+        <video
+          className="absolute inset-0 w-full h-full object-contain"
+          controls
+          autoPlay={false}
+          loop={false}
+          playsInline
+          preload="metadata"
+          poster=""
+        >
+          <source src="/videos/xhs-live-demo.mp4" type="video/mp4" />
+          您的浏览器不支持视频播放
+        </video>
+
+        {/* 直播标识角标 */}
+        <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2 py-1 rounded-full bg-rose-500/80 backdrop-blur-sm">
+          <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+          <span className="text-[10px] font-semibold text-white tracking-wide">直播回放</span>
         </div>
-      ) : (
-        <div className="relative w-full" style={{ paddingBottom: "56.25%", minHeight: "420px" }}>
-          <iframe
-            src={XHS_LIVE_URL}
-            className="absolute inset-0 w-full h-full border-0"
-            allow="autoplay; encrypted-media; picture-in-picture"
-            allowFullScreen
-            title="小红书运动薯直播"
-            onError={() => setIframeError(true)}
-            onLoad={(e) => {
-              // 检测是否被拒绝（部分浏览器会触发空白 load 而不是 error）
-              try {
-                const doc = (e.target as HTMLIFrameElement).contentDocument;
-                if (!doc || doc.body?.innerHTML === "") setIframeError(true);
-              } catch {
-                // 跨域访问 contentDocument 会 throw，说明页面确实加载了（跨域正常限制）
-                // 不设 error，让 iframe 继续显示
-              }
-            }}
-          />
-        </div>
-      )}
+      </div>
 
       {/* 底部说明 */}
       <div className="px-5 py-2.5 bg-surface-2/20 border-t border-border/20 flex items-center justify-between">
-        <span className="text-[10px] text-muted/50">内容来源：小红书平台 · 仅供舆情参考</span>
-        <span className="text-[10px] text-muted/40">若无法加载请点击右上角链接访问</span>
+        <span className="text-[10px] text-muted/50">内容来源：小红书运动薯 · 世界杯舆情参考录像</span>
+        <a
+          href={XHS_LIVE_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-[10px] text-rose-400/60 hover:text-rose-300 transition-colors"
+        >
+          查看原始直播 →
+        </a>
       </div>
     </div>
   );
