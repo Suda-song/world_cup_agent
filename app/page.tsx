@@ -91,6 +91,36 @@ export default function LandingPage() {
       }`}
       style={{ zIndex: 9999 }}
     >
+      {/* 体育场夜战氛围背景 */}
+      <div
+        className="absolute inset-0 transition-opacity duration-700 pointer-events-none"
+        style={{ opacity: phase === "expand" ? 0 : 1 }}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="https://images.unsplash.com/photo-1489944440615-453fc2b6a9a9?w=1920&q=75"
+          alt="World Cup stadium"
+          referrerPolicy="no-referrer"
+          className="w-full h-full object-cover"
+        />
+        {/* 暗化 + 上下渐隐，保证文字清晰 */}
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              "linear-gradient(180deg, rgba(6,12,24,0.78) 0%, rgba(6,12,24,0.5) 42%, rgba(6,12,24,0.95) 100%)",
+          }}
+        />
+        {/* 品牌色光晕 */}
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              "radial-gradient(65% 55% at 50% 32%, rgba(16,185,129,0.18), transparent 70%)",
+          }}
+        />
+      </div>
+
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {mounted && phase === "idle" && stars.map((s) => (
           <div
@@ -150,35 +180,60 @@ export default function LandingPage() {
           transform: phase === "expand" ? "scale(0.9)" : "scale(1)",
         }}
       >
+        {/* 东道主 + 赛事标识 */}
+        <div className="flex items-center justify-center gap-3 mb-6">
+          <span className="text-xl leading-none">🇨🇦 🇺🇸 🇲🇽</span>
+          <span className="px-2.5 py-1 rounded-full border border-white/20 bg-white/5 backdrop-blur text-[10px] tracking-[0.25em] text-white/70 uppercase">
+            2026 FIFA World Cup
+          </span>
+        </div>
+
         <div
-          className="text-[80px] mb-6 transition-transform duration-300"
+          className="text-[64px] mb-4 transition-transform duration-300"
           style={{
             transform: phase === "glow" ? "scale(1.25)" : "scale(1)",
-            filter: phase === "glow" ? "drop-shadow(0 0 40px #22c55e)" : "none",
+            filter: phase === "glow" ? "drop-shadow(0 0 40px #22c55e)" : "drop-shadow(0 6px 24px rgba(0,0,0,0.5))",
           }}
         >
           ⚽
         </div>
 
-        <div className="mb-2 text-xs tracking-[0.3em] text-white/40 uppercase">
-          2026 FIFA World Cup
-        </div>
-        <h1 className="text-4xl md:text-6xl font-black tracking-tight text-white mb-2">
-          世界杯预测
+        <h1 className="text-5xl md:text-7xl font-black tracking-tight mb-3">
+          <span className="shimmer-text">世界杯冠军预测</span>
         </h1>
-        <p className="text-white/40 text-sm mb-10">AI 驱动 · 真实赛程 · 深度分析</p>
+        <p className="text-white/60 text-sm md:text-base mb-9">
+          AI 驱动 · 真实赛程 · 逐场推演 · 深度分析
+        </p>
 
         <button
           ref={buttonRef}
           onClick={handleEnter}
           disabled={phase !== "idle"}
-          className="relative group px-10 py-4 rounded-2xl text-base font-bold tracking-wide bg-linear-to-r from-pitch-bright to-data text-black transition-all duration-300 hover:scale-105 hover:shadow-[0_0_40px_rgba(34,197,94,0.5)] disabled:opacity-0 disabled:pointer-events-none overflow-hidden cursor-pointer"
+          className="relative group px-12 py-4 rounded-2xl text-base font-bold tracking-wide bg-linear-to-r from-pitch-bright to-data text-black transition-all duration-300 hover:scale-105 hover:shadow-[0_0_50px_rgba(34,197,94,0.55)] disabled:opacity-0 disabled:pointer-events-none overflow-hidden cursor-pointer"
         >
-          <span className="relative z-10">开始预测</span>
+          <span className="relative z-10">开始预测 →</span>
           <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-10 transition-opacity" />
         </button>
 
-        <div className="mt-6 text-white/20 text-xs">Elo + 泊松 + 蒙特卡洛 + Qwen AI</div>
+        {/* 赛事数据 */}
+        <div className="mt-9 flex flex-wrap items-center justify-center gap-2.5">
+          {[
+            ["48", "支球队"],
+            ["104", "场比赛"],
+            ["16", "座城市"],
+            ["3", "个东道主"],
+          ].map(([n, label]) => (
+            <div
+              key={label}
+              className="px-3.5 py-1.5 rounded-xl border border-white/12 bg-white/5 backdrop-blur flex items-baseline gap-1.5"
+            >
+              <span className="text-sm font-bold text-white">{n}</span>
+              <span className="text-[10px] text-white/50">{label}</span>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-6 text-white/30 text-[11px] tracking-wide">Elo + 泊松 + 蒙特卡洛 + Qwen AI 驱动</div>
       </div>
 
       <style>{`
