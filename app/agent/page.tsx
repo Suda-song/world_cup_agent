@@ -321,7 +321,7 @@ function ReasoningChain({ steps }: { steps: string[] }) {
   );
 }
 
-const EXPLORE_MODULES = [
+const EXPLORE_MODULES: { href: string; icon: string; title: string; desc: string; color: string; tag: string; badge?: string }[] = [
   {
     href: "/bracket",
     icon: "🏆",
@@ -370,6 +370,15 @@ const EXPLORE_MODULES = [
     color: "border-muted/20 hover:border-muted/40 hover:bg-surface-2",
     tag: "数据",
   },
+  {
+    href: "/data#xhs-live",
+    icon: "📱",
+    title: "小红书直播回放",
+    desc: "运动薯世界杯直播 · AI 舆情情绪实时解读",
+    color: "border-rose-500/25 hover:border-rose-500/50 hover:bg-rose-500/5",
+    tag: "直播",
+    badge: "NEW",
+  },
 ];
 
 function ExploreModules() {
@@ -385,7 +394,12 @@ function ExploreModules() {
           >
             <div className="flex items-start justify-between mb-1.5">
               <span className="text-lg">{m.icon}</span>
-              <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-surface-2 text-muted">{m.tag}</span>
+              <div className="flex items-center gap-1">
+                {m.badge && (
+                  <span className="text-[8px] px-1 py-0.5 rounded-full bg-rose-500/80 text-white font-bold animate-pulse">{m.badge}</span>
+                )}
+                <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-surface-2 text-muted">{m.tag}</span>
+              </div>
             </div>
             <div className="text-xs font-semibold text-foreground group-hover:text-foreground transition-colors">{m.title}</div>
             <div className="text-[10px] text-muted mt-0.5 leading-relaxed">{m.desc}</div>

@@ -324,7 +324,9 @@ export default function DataPage() {
           </div>
 
           {/* ── 小红书运动薯直播 ──── */}
-          <XhsLiveCard />
+          <div id="xhs-live" className="scroll-mt-20">
+            <XhsLiveCard />
+          </div>
 
         </>
       )}
@@ -335,6 +337,49 @@ export default function DataPage() {
 const XHS_LIVE_URL =
   "https://www.xiaohongshu.com/livestream/570347737968922116?source=web_search_onebox&xsec_token=ABCu7j15KJ8R3qzeGm2ZiWPCbqcBuCRuDZppTO2w-1aOeHPSsVYyso5UofX6qja-re&keyword=%E8%BF%90%E5%8A%A8%E8%96%AF";
 
+const XHS_MOCK_ANALYSIS = [
+  {
+    tag: "热度峰值",
+    icon: "🔥",
+    color: "text-orange-400",
+    bg: "bg-orange-500/10 border-orange-500/20",
+    title: "法国 vs 阿根廷 成最高话题",
+    desc: "本场话题量破 280 万，评论区法阿球迷激烈交锋，#决赛预测# 话题阅读量 24 小时涨幅 +340%。",
+  },
+  {
+    tag: "正向情绪",
+    icon: "📈",
+    color: "text-pitch-bright",
+    bg: "bg-pitch-bright/10 border-pitch-bright/20",
+    title: "阿根廷舆情持续升温",
+    desc: "梅西相关词条连续 3 天登顶运动热榜，球迷弹幕以「传奇」「封神」为主，情绪指数 +4.2。",
+  },
+  {
+    tag: "负向预警",
+    icon: "⚠️",
+    color: "text-red-400",
+    bg: "bg-red-500/10 border-red-500/20",
+    title: "英格兰出局引发大规模吐槽",
+    desc: "英格兰淘汰后涌入大量负面评论，\"又输了\" \"失望\" 等词云密度激增，情绪指数 -2.8。",
+  },
+  {
+    tag: "黑马声量",
+    icon: "🌟",
+    color: "text-violet-400",
+    bg: "bg-violet-500/10 border-violet-500/20",
+    title: "摩洛哥意外破圈",
+    desc: "摩洛哥每场胜利后均引发一波「非洲雄狮崛起」讨论，跨文化共鸣显著，转发量高于预期 220%。",
+  },
+  {
+    tag: "情绪预测",
+    icon: "🤖",
+    color: "text-data-bright",
+    bg: "bg-data/10 border-data/20",
+    title: "AI 判断：决赛情绪将创历届峰值",
+    desc: "基于现有声量增速曲线，模型预测决赛日直播间弹幕密度将达 12,000 条/分钟，超越 2022 年卡塔尔决赛。",
+  },
+];
+
 function XhsLiveCard() {
   return (
     <div className="card p-0 overflow-hidden border-rose-500/20">
@@ -343,8 +388,8 @@ function XhsLiveCard() {
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-xl bg-rose-500/20 flex items-center justify-center text-lg">📱</div>
           <div>
-            <div className="text-sm font-semibold text-rose-200">小红书 · 运动薯直播</div>
-            <div className="text-[10px] text-rose-400/60">实时舆情参考 · 世界杯热点内容聚合</div>
+            <div className="text-sm font-semibold text-rose-200">小红书 · 运动薯直播 × AI 舆情解读</div>
+            <div className="text-[10px] text-rose-400/60">实时直播回放 · 多维情绪指数分析</div>
           </div>
         </div>
         <a
@@ -358,31 +403,64 @@ function XhsLiveCard() {
         </a>
       </div>
 
-      {/* 视频播放区 */}
-      <div className="relative w-full bg-black" style={{ paddingBottom: "56.25%" }}>
-        <video
-          className="absolute inset-0 w-full h-full object-contain"
-          controls
-          autoPlay={false}
-          loop={false}
-          playsInline
-          preload="metadata"
-          poster=""
-        >
-          <source src="/videos/xhs-live-demo.mp4" type="video/mp4" />
-          您的浏览器不支持视频播放
-        </video>
+      {/* 主体：左视频 + 右分析 */}
+      <div className="flex flex-col lg:flex-row">
+        {/* 左侧：视频（固定宽度） */}
+        <div className="lg:w-[52%] shrink-0 relative bg-black">
+          <div className="relative" style={{ paddingBottom: "56.25%" }}>
+            <video
+              className="absolute inset-0 w-full h-full object-contain"
+              controls
+              autoPlay={false}
+              loop={false}
+              playsInline
+              preload="metadata"
+            >
+              <source src="/videos/xhs-live-demo.mp4" type="video/mp4" />
+              您的浏览器不支持视频播放
+            </video>
+            <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2 py-1 rounded-full bg-rose-500/80 backdrop-blur-sm">
+              <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+              <span className="text-[10px] font-semibold text-white tracking-wide">直播回放</span>
+            </div>
+          </div>
+        </div>
 
-        {/* 直播标识角标 */}
-        <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2 py-1 rounded-full bg-rose-500/80 backdrop-blur-sm">
-          <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-          <span className="text-[10px] font-semibold text-white tracking-wide">直播回放</span>
+        {/* 右侧：AI 舆情分析 */}
+        <div className="flex-1 border-t lg:border-t-0 lg:border-l border-border/20 flex flex-col">
+          {/* 右侧标题 */}
+          <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border/20 bg-surface-2/20">
+            <span className="text-xs font-semibold text-foreground/80">🤖 AI 舆情解读</span>
+            <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-data/15 text-data-bright">模拟数据</span>
+          </div>
+
+          {/* 分析条目列表 */}
+          <div className="flex-1 overflow-y-auto divide-y divide-border/15">
+            {XHS_MOCK_ANALYSIS.map((item) => (
+              <div key={item.tag} className="px-4 py-3 hover:bg-surface-2/20 transition-colors">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded border ${item.bg} ${item.color}`}>
+                    {item.icon} {item.tag}
+                  </span>
+                </div>
+                <div className="text-[12px] font-medium text-foreground/90 mb-0.5">{item.title}</div>
+                <div className="text-[11px] text-muted/70 leading-relaxed">{item.desc}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* 右侧底部 */}
+          <div className="px-4 py-2 border-t border-border/15 bg-surface-2/10">
+            <div className="text-[9px] text-muted/40">
+              📊 数据来源：小红书平台实时采集 · 情绪指数为模型估算值
+            </div>
+          </div>
         </div>
       </div>
 
       {/* 底部说明 */}
-      <div className="px-5 py-2.5 bg-surface-2/20 border-t border-border/20 flex items-center justify-between">
-        <span className="text-[10px] text-muted/50">内容来源：小红书运动薯 · 世界杯舆情参考录像</span>
+      <div className="px-5 py-2 bg-surface-2/20 border-t border-border/20 flex items-center justify-between">
+        <span className="text-[10px] text-muted/50">内容来源：小红书运动薯 · 世界杯舆情参考</span>
         <a
           href={XHS_LIVE_URL}
           target="_blank"
