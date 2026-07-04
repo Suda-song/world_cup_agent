@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { getTeam } from "@/lib/data/loader";
 import { apiUrl } from "@/lib/basePath";
+import { useAppStore, type MatchCardPayload } from "@/lib/store";
 
 interface ReasoningData {
   matchId: string;
@@ -69,6 +70,10 @@ export default function MatchReasoning({
   const [aiAnalysis, setAiAnalysis] = useState<string>("");
   const [aiLoading, setAiLoading] = useState(false);
   const [aiSource, setAiSource] = useState<string>("");
+  const [sent, setSent] = useState(false);
+
+  const sendMatchCard = useAppStore((s) => s.sendMatchCard);
+  const agentInitialized = useAppStore((s) => s.agentInitialized);
 
   const fetchAIAnalysis = async () => {
     setAiLoading(true);
@@ -113,6 +118,42 @@ export default function MatchReasoning({
     match.teamA === championId || match.teamB === championId;
   const winnerName = teamName(match.winner);
   const winnerIsA = match.winner === match.teamA;
+
+  const handleSendToAgent = () => {
+    const card: MatchCardPayload = {
+      matchId: match.matchId,
+      stage: match.stage,
+      teamA: match.teamA,
+      teamB: match.teamB,
+      scoreA: match.scoreA,
+      scoreB: match.scoreB,
+      winner: match.winner,
+      wentToPenalties: match.wentToPenalties,
+      eloA: match.eloA,
+      eloB: match.eloB,
+      eloDiff: match.eloDiff,
+      eloWinProbA: match.eloWinProbA,
+      lambdaA: match.lambdaA,
+      lambdaB: match.lambdaB,
+      strengthA: match.strengthA,
+      strengthB: match.strengthB,
+      styleA: match.styleA,
+      styleB: match.styleB,
+      styleClashA: match.styleClashA,
+      styleClashB: match.styleClashB,
+      moodModA: match.moodModA,
+      moodModB: match.moodModB,
+      probWinA: match.probWinA,
+      probDraw: match.probDraw,
+      probWinB: match.probWinB,
+      reasoningSteps: match.reasoningSteps,
+      aiAnalysis: aiAnalysis || undefined,
+      aiSource: aiSource || undefined,
+    };
+    sendMatchCard(card);
+    setSent(true);
+    setTimeout(() => setSent(false), 2000);
+  };
 
   return (
     <div className="rounded-2xl border border-border bg-surface/60 p-5 space-y-4">
@@ -239,7 +280,7 @@ export default function MatchReasoning({
           <button
             onClick={fetchAIAnalysis}
             disabled={aiLoading}
-            className="text-xs px-3 py-1 rounded-lg bg-gradient-to-r from-purple-500/30 to-indigo-500/30 border border-purple-500/30 text-purple-300 hover:from-purple-500/40 hover:to-indigo-500/40 transition-all disabled:opacity-50"
+            className="text-xs px-3 py-1 rounded-lg bg-linear-to-r from-purple-500/30 to-indigo-500/30 border border-purple-500/30 text-purple-300 hover:from-purple-500/40 hover:to-indigo-500/40 transition-all disabled:opacity-50"
           >
             {aiLoading ? "分析中..." : aiAnalysis ? "重新分析" : "🤖 Qwen 分析"}
           </button>
@@ -263,6 +304,27 @@ export default function MatchReasoning({
           </div>
         )}
       </div>
+
+      {/* 发送给 Agent 悬浮球 */}
+      {agentInitialized && (
+        <button
+          onClick={handleSendToAgent}
+          className={`w-full flex items-center justify-center gap-2 rounded-xl border py-2.5 text-xs font-semibold transition-all ${
+            sent
+              ? "border-pitch/50 bg-pitch/15 text-pitch-bright"
+              : "border-data/30 bg-data/8 text-data-bright hover:bg-data/15 hover:border-data/50"
+          }`}
+        >
+          {sent ? (
+            <>✓ 已发送给 Agent</>
+          ) : (
+            <>
+              <span className="text-base leading-none">🤖</span>
+              发送给 AI · 在悬浮球中深度解析
+            </>
+          )}
+        </button>
+      )}
     </div>
   );
 }

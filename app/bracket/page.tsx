@@ -5,8 +5,7 @@ import {
   type MatchReasoning as MatchReason,
 } from "@/lib/prediction/detailedSim";
 import type { TournamentStatus } from "@/app/api/live-results/route";
-import { useAppStore } from "@/lib/store";
-import MatchReasoningPanel from "@/components/bracket/MatchReasoning";
+import { useAppStore, type MatchCardPayload } from "@/lib/store";
 import { getTeam } from "@/lib/data/loader";
 import StageTimeline from "@/components/common/StageTimeline";
 import { apiUrl } from "@/lib/basePath";
@@ -41,6 +40,8 @@ export default function BracketPage() {
 
   const detailedResult = useAppStore((s) => s.detailedResult);
   const runDetailedSim = useAppStore((s) => s.runDetailedSim);
+  const agentInitialized = useAppStore((s) => s.agentInitialized);
+  const sendMatchCard = useAppStore((s) => s.sendMatchCard);
 
   // 首次进入触发模拟；simKey > 0 时强制重跑（手动点重新模拟）
   // store 内 runDetailedSim 保证幂等：有结果且非 force 时立即跳过
@@ -295,39 +296,80 @@ export default function BracketPage() {
                             ? "📅 待踢（对手已定）"
                             : "🔮 预测（对手待定）";
                         return (
-                          <div
-                            key={m.matchId}
-                            onClick={() => handleMatchClick(m)}
-                            className={`rounded-xl border p-2.5 cursor-pointer transition-all ${cardClass}`}
-                          >
-                            <div className="flex items-center justify-between mb-1.5">
-                              <span className={`text-[9px] px-1.5 py-0.5 rounded font-semibold ${tagClass}`}>
-                                {tagText}
-                              </span>
-                              {isChamp && !isSelected && (
-                                <span className="text-[9px] text-amber-400">★ 冠军之路</span>
+                          <div key={m.matchId} className="relative">
+                            <div
+                              onClick={() => handleMatchClick(m)}
+                              className={`rounded-xl border p-2.5 cursor-pointer transition-all ${cardClass}`}
+                            >
+                              <div className="flex items-center justify-between mb-1.5">
+                                <span className={`text-[9px] px-1.5 py-0.5 rounded font-semibold ${tagClass}`}>
+                                  {tagText}
+                                </span>
+                                {isChamp && !isSelected && (
+                                  <span className="text-[9px] text-amber-400">★ 冠军之路</span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-1.5 text-xs">
+                                <span className="text-base">{flag(m.teamA)}</span>
+                                <span className={`flex-1 truncate ${m.winner === m.teamA ? "font-bold text-foreground" : "text-muted"}`}>
+                                  {name(m.teamA)}
+                                </span>
+                                <span className={`font-mono font-bold text-sm ${m.winner === m.teamA ? (ms === "finished" ? "text-pitch-bright" : "text-orange-600") : "text-muted"}`}>
+                                  {m.scoreA}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1.5 text-xs mt-1">
+                                <span className="text-base">{flag(m.teamB)}</span>
+                                <span className={`flex-1 truncate ${m.winner === m.teamB ? "font-bold text-foreground" : "text-muted"}`}>
+                                  {name(m.teamB)}
+                                </span>
+                                <span className={`font-mono font-bold text-sm ${m.winner === m.teamB ? (ms === "finished" ? "text-pitch-bright" : "text-orange-600") : "text-muted"}`}>
+                                  {m.scoreB}
+                                </span>
+                              </div>
+                              {m.wentToPenalties && (
+                                <div className="text-[9px] text-amber-400 mt-1 text-center">点球大战</div>
                               )}
                             </div>
-                            <div className="flex items-center gap-1.5 text-xs">
-                              <span className="text-base">{flag(m.teamA)}</span>
-                              <span className={`flex-1 truncate ${m.winner === m.teamA ? "font-bold text-foreground" : "text-muted"}`}>
-                                {name(m.teamA)}
-                              </span>
-                              <span className={`font-mono font-bold text-sm ${m.winner === m.teamA ? (ms === "finished" ? "text-pitch-bright" : "text-orange-600") : "text-muted"}`}>
-                                {m.scoreA}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-1.5 text-xs mt-1">
-                              <span className="text-base">{flag(m.teamB)}</span>
-                              <span className={`flex-1 truncate ${m.winner === m.teamB ? "font-bold text-foreground" : "text-muted"}`}>
-                                {name(m.teamB)}
-                              </span>
-                              <span className={`font-mono font-bold text-sm ${m.winner === m.teamB ? (ms === "finished" ? "text-pitch-bright" : "text-orange-600") : "text-muted"}`}>
-                                {m.scoreB}
-                              </span>
-                            </div>
-                            {m.wentToPenalties && (
-                              <div className="text-[9px] text-amber-400 mt-1 text-center">点球大战</div>
+                            {/* 选中后浮现「询问 AI」按钮 */}
+                            {isSelected && agentInitialized && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const card: MatchCardPayload = {
+                                    matchId: m.matchId,
+                                    stage: m.stage,
+                                    teamA: m.teamA,
+                                    teamB: m.teamB,
+                                    scoreA: m.scoreA,
+                                    scoreB: m.scoreB,
+                                    winner: m.winner,
+                                    wentToPenalties: m.wentToPenalties,
+                                    eloA: m.eloA,
+                                    eloB: m.eloB,
+                                    eloDiff: m.eloDiff,
+                                    lambdaA: m.lambdaA,
+                                    lambdaB: m.lambdaB,
+                                    probWinA: m.probWinA,
+                                    probDraw: m.probDraw,
+                                    probWinB: m.probWinB,
+                                    reasoningSteps: m.reasoningSteps,
+                                    strengthA: m.strengthA,
+                                    strengthB: m.strengthB,
+                                    styleClashA: m.styleClashA,
+                                    styleClashB: m.styleClashB,
+                                    styleA: m.styleA as string,
+                                    styleB: m.styleB as string,
+                                    moodModA: m.moodModA,
+                                    moodModB: m.moodModB,
+                                    eloWinProbA: m.eloWinProbA,
+                                  };
+                                  sendMatchCard(card);
+                                }}
+                                className="mt-1.5 w-full flex items-center justify-center gap-1.5 rounded-lg border border-data/40 bg-data/10 py-1.5 text-[10px] font-semibold text-data-bright hover:bg-data/20 transition-all"
+                              >
+                                <span>🤖</span> 询问 AI
+                              </button>
                             )}
                           </div>
                         );
@@ -339,29 +381,11 @@ export default function BracketPage() {
             </div>
           </div>
           <p className="text-[10px] text-muted mt-2">
-            💡 点击任意比赛查看完整推理链路与 AI 赛事分析
+            💡 点击任意比赛卡片，选中后点击「🤖 询问 AI」在 Agent 中深度解析
           </p>
         </div>
 
       </div>
-
-      {/* 推理面板 —— 固定浮动在右下角，选中比赛后出现 */}
-      {selectedMatch && (
-        <div className="fixed bottom-6 right-6 z-50 w-[360px] max-h-[80vh] overflow-y-auto shadow-2xl rounded-2xl">
-          <div className="relative">
-            <button
-              onClick={() => setSelectedMatch(null)}
-              className="absolute top-3 right-3 z-10 w-6 h-6 rounded-full bg-surface-2 hover:bg-surface flex items-center justify-center text-muted hover:text-foreground text-xs transition-colors"
-            >
-              ✕
-            </button>
-            <MatchReasoningPanel
-              match={selectedMatch}
-              championId={result.champion}
-            />
-          </div>
-        </div>
-      )}
 
       {/* 冠军之路 */}
       <div>

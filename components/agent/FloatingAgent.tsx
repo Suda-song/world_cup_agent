@@ -4,7 +4,8 @@ import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { apiUrl } from "@/lib/basePath";
-import { useAppStore, type AgentChatMessage } from "@/lib/store";
+import { useAppStore, type AgentChatMessage, type MatchCardPayload } from "@/lib/store";
+import { getTeam } from "@/lib/data/loader";
 
 // 解析 Qwen 插入的 [NAV:/path:label] 跳转标记
 const NAV_RE = /\[NAV:([^:]+):([^\]]+)\]/g;
@@ -14,20 +15,222 @@ function parseNav(content: string) {
   return { clean, links };
 }
 
+const STAGE_LABEL: Record<string, string> = {
+  r32: "32强", r16: "16强", qf: "1/4决赛", sf: "半决赛", final: "决赛",
+};
+
+function teamLabel(id: string) {
+  const t = getTeam(id);
+  return t ? `${t.flag} ${t.name}` : id;
+}
+
+/** 把比赛卡片数据序列化成可读的用户消息 + 系统上下文 */
+function buildMatchMessage(card: MatchCardPayload): string {
+  const stageStr = STAGE_LABEL[card.stage] ?? card.stage;
+  const penStr = card.wentToPenalties ? "（点球大战）" : "";
+  const lines = [
+    `【赛事卡片分析请求】${stageStr}`,
+    `${teamLabel(card.teamA)} ${card.scoreA} - ${card.scoreB} ${teamLabel(card.teamB)}${penStr}`,
+    `预测冠军：${teamLabel(card.winner)}`,
+    ``,
+    `📊 关键数据`,
+    `· Elo 差值：${card.eloDiff > 0 ? "+" : ""}${card.eloDiff.toFixed(0)}（${teamLabel(card.teamA)} ${card.eloA.toFixed(0)} vs ${teamLabel(card.teamB)} ${card.eloB.toFixed(0)}）`,
+    `· 期望进球 λ：${card.lambdaA.toFixed(2)} : ${card.lambdaB.toFixed(2)}`,
+    `· 胜平负概率：${(card.probWinA * 100).toFixed(1)}% / ${(card.probDraw * 100).toFixed(1)}% / ${(card.probWinB * 100).toFixed(1)}%`,
+    ``,
+    `🔗 模型推理链路`,
+    ...card.reasoningSteps.map((s, i) => `${i + 1}. ${s}`),
+  ];
+  if (card.aiAnalysis) {
+    lines.push(``, `🤖 Qwen 已有分析（${card.aiSource ?? "本地"}）`, card.aiAnalysis);
+  }
+  lines.push(``, `请基于以上数据对这场比赛给出深度解析，包括：胜负关键因素、战术博弈分析、以及该场比赛对整体冠军预测的影响。`);
+  return lines.join("\n");
+}
+
+const STYLE_LABEL: Record<string, string> = {
+  possession: "控球流", counter: "反击流", press: "高压流",
+  defensive: "防守流", balanced: "均衡型",
+};
+
+// 完整决策数据卡片（在 FloatingAgent assistant 消息里展示）
+function MatchDataCard({ card }: { card: MatchCardPayload }) {
+  const stageStr = STAGE_LABEL[card.stage] ?? card.stage;
+  const penStr = card.wentToPenalties ? " · 点球大战" : "";
+  const tA = getTeam(card.teamA);
+  const tB = getTeam(card.teamB);
+  const winnerIsA = card.winner === card.teamA;
+
+  const rows = [
+    {
+      label: "Elo 评分",
+      a: `${card.eloA.toFixed(0)}`,
+      b: `${card.eloB.toFixed(0)}`,
+      detail: `差值 ${card.eloDiff > 0 ? "+" : ""}${card.eloDiff.toFixed(0)}，${winnerIsA ? tA?.name : tB?.name} 基础胜率 ${(card.eloWinProbA * 100).toFixed(1)}%`,
+    },
+    {
+      label: "综合战力",
+      a: card.strengthA.toFixed(1),
+      b: card.strengthB.toFixed(1),
+      detail: "攻防中场速度经验状态六维加权",
+    },
+    {
+      label: "期望进球 λ",
+      a: card.lambdaA.toFixed(2),
+      b: card.lambdaB.toFixed(2),
+      detail: "泊松模型（进攻/防守比×状态×主场）",
+    },
+    {
+      label: "心情修正",
+      a: `×${card.moodModA.toFixed(3)}`,
+      b: `×${card.moodModB.toFixed(3)}`,
+      detail: "信心/动机/压力/疲劳四维模型",
+    },
+    {
+      label: "球风修正",
+      a: `×${card.styleClashA.toFixed(2)}`,
+      b: `×${card.styleClashB.toFixed(2)}`,
+      detail: `${STYLE_LABEL[card.styleA] ?? card.styleA} vs ${STYLE_LABEL[card.styleB] ?? card.styleB}`,
+    },
+  ];
+
+  return (
+    <div className="rounded-xl border border-border bg-surface/80 overflow-hidden mb-2 text-left">
+      {/* 标题行 */}
+      <div className="px-3 py-2 bg-surface-2 border-b border-border flex items-center justify-between">
+        <div className="flex items-center gap-1.5">
+          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-pitch/20 text-pitch-bright font-semibold">{stageStr}{penStr}</span>
+          <span className="text-[10px] text-muted font-medium">决策链路分析</span>
+        </div>
+      </div>
+
+      {/* 比分展示 */}
+      <div className="flex items-center justify-between px-3 py-2.5 gap-2">
+        <div className={`flex items-center gap-1.5 flex-1 ${winnerIsA ? "opacity-100" : "opacity-55"}`}>
+          <span className="text-xl">{tA?.flag}</span>
+          <div>
+            <div className={`text-xs font-bold ${winnerIsA ? "text-foreground" : "text-muted"}`}>{tA?.name ?? card.teamA}</div>
+            <div className="text-[9px] text-muted">{STYLE_LABEL[card.styleA] ?? card.styleA}</div>
+          </div>
+        </div>
+        <div className="text-center shrink-0">
+          <div className="font-mono font-bold text-lg leading-none">
+            <span className={winnerIsA ? "text-pitch-bright" : "text-muted"}>{card.scoreA}</span>
+            <span className="text-muted/50 mx-1.5">-</span>
+            <span className={!winnerIsA ? "text-pitch-bright" : "text-muted"}>{card.scoreB}</span>
+          </div>
+          {card.wentToPenalties && <div className="text-[9px] text-amber-400 mt-0.5">点球</div>}
+        </div>
+        <div className={`flex items-center gap-1.5 flex-1 justify-end ${!winnerIsA ? "opacity-100" : "opacity-55"}`}>
+          <div className="text-right">
+            <div className={`text-xs font-bold ${!winnerIsA ? "text-foreground" : "text-muted"}`}>{tB?.name ?? card.teamB}</div>
+            <div className="text-[9px] text-muted">{STYLE_LABEL[card.styleB] ?? card.styleB}</div>
+          </div>
+          <span className="text-xl">{tB?.flag}</span>
+        </div>
+      </div>
+
+      {/* 胜平负条 */}
+      <div className="px-3 pb-1">
+        <div className="flex h-1.5 rounded-full overflow-hidden gap-0.5">
+          <div className="rounded-full bg-pitch-bright/80" style={{ width: `${card.probWinA * 100}%` }} />
+          <div className="rounded-full bg-muted/25" style={{ width: `${card.probDraw * 100}%` }} />
+          <div className="rounded-full bg-data/70" style={{ width: `${card.probWinB * 100}%` }} />
+        </div>
+        <div className="flex justify-between text-[9px] text-muted mt-0.5">
+          <span>{tA?.name?.slice(0, 3)} {(card.probWinA * 100).toFixed(0)}%</span>
+          <span>平 {(card.probDraw * 100).toFixed(0)}%</span>
+          <span>{(card.probWinB * 100).toFixed(0)}% {tB?.name?.slice(0, 3)}</span>
+        </div>
+      </div>
+
+      {/* 决策数据网格 */}
+      <div className="px-3 py-2 space-y-1.5 border-t border-border/50">
+        {rows.map((row, i) => (
+          <div key={i} className="flex items-start gap-2 text-[10px]">
+            <span className="text-muted w-16 shrink-0 pt-0.5">{row.label}</span>
+            <div className="flex-1">
+              <div className="flex gap-2 font-mono font-bold">
+                <span className={winnerIsA ? "text-pitch-bright" : "text-foreground/70"}>{row.a}</span>
+                <span className="text-muted/40">vs</span>
+                <span className={!winnerIsA ? "text-pitch-bright" : "text-foreground/70"}>{row.b}</span>
+              </div>
+              <div className="text-muted/70 text-[9px] mt-0.5">{row.detail}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* 推理步骤 */}
+      <div className="px-3 py-2 border-t border-border/50 space-y-1">
+        <div className="text-[9px] text-muted uppercase tracking-wider font-semibold mb-1">推理链路</div>
+        {card.reasoningSteps.map((step, i) => (
+          <div key={i} className="flex gap-1.5 text-[10px]">
+            <span className="text-pitch-bright/60 shrink-0 font-mono">{i + 1}.</span>
+            <span className="text-foreground/75 leading-relaxed">{step}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 const QUICK_TASKS = ["为什么这支队最有可能夺冠？", "本届最大黑马是谁？", "决赛预测是什么？"];
+
+type QueueItem =
+  | { type: "text"; content: string }
+  | { type: "match"; card: MatchCardPayload };
 
 export default function FloatingAgent() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  // 待发送消息队列（仅展示用，不含正在发送的那条）
+  const [pendingQueue, setPendingQueue] = useState<QueueItem[]>([]);
+  const queueRef = useRef<QueueItem[]>([]);
+  const loadingRef = useRef(false);
 
   // 与 /agent 页面共享同一份消息状态
   const messages = useAppStore((s) => s.agentMessages);
   const setMessages = useAppStore((s) => s.setAgentMessages);
   const agentInitialized = useAppStore((s) => s.agentInitialized);
+  const pendingMatchCard = useAppStore((s) => s.pendingMatchCard);
+  const clearPendingMatchCard = useAppStore((s) => s.clearPendingMatchCard);
 
   const bottomRef = useRef<HTMLDivElement>(null);
+
+  /** 入队一条消息，如果当前没有请求在跑则立即发送，否则排队等待 */
+  const enqueue = (item: QueueItem) => {
+    if (!loadingRef.current) {
+      // 直接发
+      if (item.type === "text") _sendMessage(item.content);
+      else _sendMatchAnalysis(item.card);
+    } else {
+      // 追加到队列并更新显示
+      queueRef.current = [...queueRef.current, item];
+      setPendingQueue([...queueRef.current]);
+    }
+  };
+
+  /** 当前请求完成后，取出队列里的下一条 */
+  const drainQueue = () => {
+    if (queueRef.current.length === 0) return;
+    const [next, ...rest] = queueRef.current;
+    queueRef.current = rest;
+    setPendingQueue([...rest]);
+    if (next.type === "text") _sendMessage(next.content);
+    else _sendMatchAnalysis(next.card);
+  };
+
+  // 监听 bracket 页面发来的比赛卡片，自动打开并入队
+  useEffect(() => {
+    if (!pendingMatchCard) return;
+    clearPendingMatchCard();
+    setOpen(true);
+    enqueue({ type: "match", card: pendingMatchCard });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingMatchCard]);
 
   useEffect(() => {
     if (open) {
@@ -38,17 +241,99 @@ export default function FloatingAgent() {
   // 在 /agent 或首页（/）不显示悬浮球
   if (pathname === "/agent" || pathname === "/") return null;
 
-  const sendMessage = async (text: string) => {
+  /** 比赛卡片专用：直接以 assistant 身份插入卡片+流式 Qwen 分析 */
+  const _sendMatchAnalysis = async (card: MatchCardPayload) => {
+    loadingRef.current = true;
+    setLoading(true);
+
+    // 直接插入 assistant 占位（含 matchCard meta，供渲染卡片）
+    const assistantMsg: AgentChatMessage = {
+      role: "assistant",
+      content: "",
+      streaming: true,
+      meta: { matchCard: card },
+    };
+    setMessages((prev) => [...prev, assistantMsg]);
+
+    // 构造给 Qwen 的 prompt（用最新消息列表，避免闭包过期）
+    const prompt = buildMatchMessage(card);
+    const currentMessages = useAppStore.getState().agentMessages;
+    const historyForQwen = [...currentMessages, { role: "user" as const, content: prompt }];
+
+    try {
+      const res = await fetch(apiUrl("/api/agent/chat"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: historyForQwen, isFirstRun: false }),
+      });
+      if (!res.ok || !res.body) throw new Error("请求失败");
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let fullContent = "";
+      let meta: AgentChatMessage["meta"] = { matchCard: card };
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        for (const line of decoder.decode(value).split("\n")) {
+          if (!line.startsWith("data: ")) continue;
+          try {
+            const json = JSON.parse(line.slice(6));
+            if (json.delta) {
+              fullContent += json.delta;
+              setMessages((prev) => {
+                const next = [...prev];
+                next[next.length - 1] = { role: "assistant", content: fullContent, streaming: true, meta };
+                return next;
+              });
+            }
+            if (json.done && json.meta) meta = { ...json.meta, matchCard: card };
+          } catch { /* ignore */ }
+        }
+      }
+
+      setMessages((prev) => {
+        const next = [...prev];
+        next[next.length - 1] = { role: "assistant", content: fullContent, streaming: false, meta };
+        return next;
+      });
+    } catch (err) {
+      setMessages((prev) => {
+        const next = [...prev];
+        next[next.length - 1] = {
+          role: "assistant",
+          content: "❌ 分析失败：" + (err instanceof Error ? err.message : "未知错误"),
+          streaming: false,
+          meta: { matchCard: card },
+        };
+        return next;
+      });
+    } finally {
+      loadingRef.current = false;
+      setLoading(false);
+      drainQueue();
+    }
+  };
+
+  const sendMessage = (text: string) => {
     const content = text.trim();
-    if (!content || loading) return;
+    if (!content) return;
     setInput("");
     setOpen(true);
+    enqueue({ type: "text", content });
+  };
 
+  const _sendMessage = async (content: string) => {
+    loadingRef.current = true;
+    setLoading(true);
+
+    // 用最新消息列表（避免闭包过期）
+    const currentMessages = useAppStore.getState().agentMessages;
     const userMsg: AgentChatMessage = { role: "user", content };
-    const newHistory = [...messages, userMsg];
+    const newHistory = [...currentMessages, userMsg];
     setMessages(newHistory);
 
-    setLoading(true);
     const placeholder: AgentChatMessage = { role: "assistant", content: "", streaming: true };
     setMessages((prev) => [...prev, placeholder]);
 
@@ -56,10 +341,8 @@ export default function FloatingAgent() {
       const res = await fetch(apiUrl("/api/agent/chat"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        // 不是首次运行，带上对话历史
         body: JSON.stringify({ messages: newHistory, isFirstRun: false }),
       });
-
       if (!res.ok || !res.body) throw new Error("请求失败");
 
       const reader = res.body.getReader();
@@ -70,8 +353,7 @@ export default function FloatingAgent() {
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-        const lines = decoder.decode(value).split("\n");
-        for (const line of lines) {
+        for (const line of decoder.decode(value).split("\n")) {
           if (!line.startsWith("data: ")) continue;
           try {
             const json = JSON.parse(line.slice(6));
@@ -104,7 +386,9 @@ export default function FloatingAgent() {
         return next;
       });
     } finally {
+      loadingRef.current = false;
       setLoading(false);
+      drainQueue();
     }
   };
 
@@ -145,18 +429,33 @@ export default function FloatingAgent() {
             ) : (
               messages.map((msg, idx) => (
                 <div key={idx} className={msg.role === "user" ? "text-right" : "text-left"}>
-                  {(() => {
+
+                  {/* assistant 消息：带 matchCard 时先展示完整决策卡片 */}
+                  {msg.role === "assistant" && msg.meta?.matchCard && (
+                    <div className="max-w-[96%]">
+                      <MatchDataCard card={msg.meta.matchCard as MatchCardPayload} />
+                    </div>
+                  )}
+
+                  {/* 消息气泡（assistant 带 matchCard 时只有流式内容，无 matchCard 则正常显示） */}
+                  {(msg.role === "user" || msg.content || msg.streaming) && (() => {
                     const { clean, links } = msg.role === "assistant" && !msg.streaming
                       ? parseNav(msg.content) : { clean: msg.content, links: [] };
+                    // assistant matchCard 消息：streaming 且内容为空时显示"分析中..."
+                    const showContent = msg.role === "assistant" && msg.meta?.matchCard && !msg.content && msg.streaming
+                      ? "" : clean;
+                    if (msg.role === "assistant" && msg.meta?.matchCard && !msg.content && !msg.streaming) return null;
                     return (
                       <div
-                        className={`inline-block max-w-[92%] rounded-2xl px-3 py-2 text-xs leading-relaxed whitespace-pre-line ${
+                        className={`inline-block max-w-[96%] rounded-2xl px-3 py-2 text-xs leading-relaxed whitespace-pre-line ${
                           msg.role === "user"
                             ? "bg-pitch/20 border border-pitch/30 text-foreground"
-                            : "bg-surface-2 text-foreground"
+                            : msg.meta?.matchCard
+                              ? "bg-surface-2/60 border border-border/40 text-foreground w-full"
+                              : "bg-surface-2 text-foreground"
                         }`}
                       >
-                        {clean}
+                        {showContent}
                         {msg.streaming && (
                           <span className="inline-block w-0.5 h-3 bg-pitch-bright ml-0.5 animate-pulse align-middle" />
                         )}
@@ -173,9 +472,10 @@ export default function FloatingAgent() {
                       </div>
                     );
                   })()}
+
                   {/* 显示首条回复的夺冠 Top3 */}
                   {msg.role === "assistant" && !msg.streaming && msg.meta?.topChampions && (
-                    <div className="mt-1.5 inline-block max-w-[92%] rounded-xl border border-border bg-surface/60 px-3 py-2 text-left">
+                    <div className="mt-1.5 inline-block max-w-[96%] rounded-xl border border-border bg-surface/60 px-3 py-2 text-left">
                       <div className="text-[10px] text-muted mb-1">夺冠概率 Top 3</div>
                       {(msg.meta.topChampions as { team: string; probability: number }[]).slice(0, 3).map((c, i) => (
                         <div key={c.team} className="flex justify-between gap-3 text-[11px]">
@@ -189,8 +489,29 @@ export default function FloatingAgent() {
               ))
             )}
             {loading && (
-              <div className="rounded-2xl bg-surface-2 px-3 py-2 text-xs text-muted">
-                推演中…
+              <div className="rounded-2xl bg-surface-2 px-3 py-2 text-xs text-muted flex items-center gap-2">
+                <span className="inline-flex gap-0.5">
+                  <span className="w-1 h-1 rounded-full bg-pitch-bright animate-bounce" style={{ animationDelay: "0ms" }} />
+                  <span className="w-1 h-1 rounded-full bg-pitch-bright animate-bounce" style={{ animationDelay: "150ms" }} />
+                  <span className="w-1 h-1 rounded-full bg-pitch-bright animate-bounce" style={{ animationDelay: "300ms" }} />
+                </span>
+                AI 分析中…
+              </div>
+            )}
+            {/* 待发送队列 */}
+            {pendingQueue.length > 0 && (
+              <div className="space-y-1">
+                {pendingQueue.map((item, i) => (
+                  <div key={i} className="flex items-center gap-2 rounded-xl border border-border/40 bg-surface-2/50 px-3 py-2 text-[10px] text-muted">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400/70 animate-pulse shrink-0" />
+                    <span className="truncate flex-1">
+                      {item.type === "match"
+                        ? `⏳ 待分析：${getTeam(item.card.teamA)?.name ?? item.card.teamA} vs ${getTeam(item.card.teamB)?.name ?? item.card.teamB}`
+                        : `⏳ 待发送：${item.content.slice(0, 30)}${item.content.length > 30 ? "…" : ""}`
+                      }
+                    </span>
+                  </div>
+                ))}
               </div>
             )}
             <div ref={bottomRef} />

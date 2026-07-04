@@ -67,7 +67,48 @@ export interface AgentChatMessage {
     source?: string;
     model?: string;
     detailedResult?: DetailedSimResult;
+    matchCard?: MatchCardPayload;
   };
+}
+
+// 从 bracket 发送给 FloatingAgent 的比赛卡片数据
+export interface MatchCardPayload {
+  matchId: string;
+  stage: string;
+  teamA: string;
+  teamB: string;
+  scoreA: number;
+  scoreB: number;
+  winner: string;
+  wentToPenalties?: boolean;
+  // Elo
+  eloA: number;
+  eloB: number;
+  eloDiff: number;
+  eloWinProbA: number;
+  // 泊松期望进球
+  lambdaA: number;
+  lambdaB: number;
+  // 综合战力
+  strengthA: number;
+  strengthB: number;
+  // 球风
+  styleA: string;
+  styleB: string;
+  styleClashA: number;
+  styleClashB: number;
+  // 心情修正
+  moodModA: number;
+  moodModB: number;
+  // 胜平负概率
+  probWinA: number;
+  probDraw: number;
+  probWinB: number;
+  // 推理链路
+  reasoningSteps: string[];
+  // 已有 Qwen 分析（可选）
+  aiAnalysis?: string;
+  aiSource?: string;
 }
 
 interface AppState {
@@ -85,6 +126,8 @@ interface AppState {
   // agent 对话历史，跨 tab 切换保留
   agentMessages: AgentChatMessage[];
   agentInitialized: boolean;
+  // bracket 比赛卡片 → FloatingAgent 的通信通道
+  pendingMatchCard: MatchCardPayload | null;
   runSimulation: (n?: number) => void;
   runDetailedSim: (force?: boolean) => Promise<void>;
   setSimCount: (n: number) => void;
@@ -95,6 +138,9 @@ interface AppState {
   clearAgentChat: () => void;
   // Agent 跑完后回写 mcResult，其他页面直接消费，不再重复模拟
   setMcResult: (result: MonteCarloResult) => void;
+  // 发送比赛卡片给 FloatingAgent
+  sendMatchCard: (card: MatchCardPayload) => void;
+  clearPendingMatchCard: () => void;
 }
 
 // 计算各队心情修正系数
@@ -118,6 +164,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   viewpointCount: 0,
   agentMessages: [],
   agentInitialized: false,
+  pendingMatchCard: null,
   runSimulation: (n?: number) => {
     const count = n ?? get().simCount;
     set({ running: true, progress: { done: 0, total: count } });
@@ -169,8 +216,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   setAgentInitialized: (v) => set({ agentInitialized: v }),
   clearAgentChat: () => set({ agentMessages: [], agentInitialized: false }),
   setMcResult: (result) => set({ mcResult: result, running: false }),
-  // 同时暴露 setDetailedResult 供 agent 写入
-
+  sendMatchCard: (card) => set({ pendingMatchCard: card }),
+  clearPendingMatchCard: () => set({ pendingMatchCard: null }),
   loadViewpoints: async () => {
     try {
       const [vpRes, cfgRes] = await Promise.all([

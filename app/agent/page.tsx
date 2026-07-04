@@ -337,6 +337,9 @@ export default function AgentPage() {
 
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [pendingQueue, setPendingQueue] = useState<string[]>([]);
+  const queueRef = useRef<string[]>([]);
+  const loadingRef = useRef(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -354,7 +357,17 @@ export default function AgentPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  /** 当前请求完成后取出队列里的下一条文本消息 */
+  const drainQueue = () => {
+    if (queueRef.current.length === 0) return;
+    const [next, ...rest] = queueRef.current;
+    queueRef.current = rest;
+    setPendingQueue([...rest]);
+    _sendMessage(next);
+  };
+
   const triggerChat = async (history: AgentChatMessage[], isFirstRun = false) => {
+    loadingRef.current = true;
     setLoading(true);
     const placeholder: AgentChatMessage = { role: "assistant", content: "", streaming: true, currentPhase: isFirstRun ? "think" : undefined };
     setMessages((prev) => [...prev, placeholder]);
@@ -446,18 +459,31 @@ export default function AgentPage() {
         return next;
       });
     } finally {
+      loadingRef.current = false;
       setLoading(false);
+      drainQueue();
     }
   };
 
-  const sendMessage = async (text?: string) => {
-    const content = (text ?? input).trim();
-    if (!content || loading) return;
-    setInput("");
+  /** 实际执行发送（不做 loading 检查，由调用方保证） */
+  const _sendMessage = (content: string) => {
+    const currentMessages = useAppStore.getState().agentMessages;
     const userMsg: AgentChatMessage = { role: "user", content };
-    const newHistory = [...messages, userMsg];
+    const newHistory = [...currentMessages, userMsg];
     setMessages(newHistory);
-    await triggerChat(newHistory, false);
+    triggerChat(newHistory, false);
+  };
+
+  const sendMessage = (text?: string) => {
+    const content = (text ?? input).trim();
+    if (!content) return;
+    setInput("");
+    if (!loadingRef.current) {
+      _sendMessage(content);
+    } else {
+      queueRef.current = [...queueRef.current, content];
+      setPendingQueue([...queueRef.current]);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -580,6 +606,17 @@ export default function AgentPage() {
             )}
           </div>
         ))}
+        {/* 待发送队列 */}
+        {pendingQueue.length > 0 && (
+          <div className="space-y-1 px-1">
+            {pendingQueue.map((content, i) => (
+              <div key={i} className="flex items-center gap-2 rounded-xl border border-border/40 bg-surface-2/50 px-4 py-2 text-xs text-muted">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-400/70 animate-pulse shrink-0" />
+                <span className="truncate flex-1">⏳ 待发送：{content.slice(0, 40)}{content.length > 40 ? "…" : ""}</span>
+              </div>
+            ))}
+          </div>
+        )}
         <div ref={bottomRef} />
       </div>
 
