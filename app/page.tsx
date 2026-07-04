@@ -47,7 +47,7 @@ const PARTICLE_DIRS = [
 
 export default function LandingPage() {
   const router = useRouter();
-  const [phase, setPhase] = useState<"idle" | "glow" | "expand">("idle");
+  const [phase, setPhase] = useState<"idle" | "kick">("idle");
   const [mounted, setMounted] = useState(false);
   const [stars, setStars] = useState<Star[]>([]);
   const [particles, setParticles] = useState<Particle[]>([]);
@@ -69,32 +69,30 @@ export default function LandingPage() {
   const handleEnter = () => {
     if (phase !== "idle") return;
 
-    const pts: Particle[] = Array.from({ length: 24 }, (_, i) => ({
+    // 进球瞬间的彩带（在球进网后爆发）
+    const pts: Particle[] = Array.from({ length: 30 }, (_, i) => ({
       id: i,
-      x: parseFloat((35 + Math.random() * 30).toFixed(3)),
-      y: parseFloat((35 + Math.random() * 30).toFixed(3)),
+      x: parseFloat((38 + Math.random() * 24).toFixed(3)),
+      y: parseFloat((22 + Math.random() * 16).toFixed(3)),
     }));
     setParticles(pts);
-    setPhase("glow");
+    setPhase("kick");
 
-    setTimeout(() => setPhase("expand"), 600);
     setTimeout(() => {
       sessionStorage.setItem("wc_entered", "1");
       router.push("/agent");
-    }, 1800);
+    }, 2000);
   };
 
   return (
     <div
-      className={`fixed inset-0 flex items-center justify-center overflow-hidden transition-colors duration-1000 ${
-        phase === "expand" ? "bg-white" : "bg-[#070b14]"
-      }`}
+      className="fixed inset-0 flex items-center justify-center overflow-hidden bg-[#070b14]"
       style={{ zIndex: 9999 }}
     >
       {/* 体育场夜战氛围背景 */}
       <div
-        className="absolute inset-0 transition-opacity duration-700 pointer-events-none"
-        style={{ opacity: phase === "expand" ? 0 : 1 }}
+        className="absolute inset-0 transition-opacity duration-500 pointer-events-none"
+        style={{ opacity: phase === "kick" ? 0 : 1 }}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
@@ -136,36 +134,75 @@ export default function LandingPage() {
         ))}
       </div>
 
-      {(phase === "glow" || phase === "expand") && (
-        <div
-          className="absolute rounded-full pointer-events-none"
-          style={{
-            width: 300,
-            height: 300,
-            background: "radial-gradient(circle, #22c55e 0%, #0ea5e9 40%, transparent 70%)",
-            transform: phase === "expand" ? "scale(60)" : "scale(0)",
-            opacity: phase === "expand" ? 1 : 0.8,
-            transition: "transform 1.2s cubic-bezier(0.16,1,0.3,1), opacity 1.2s ease",
-          }}
-        />
+      {/* ── 进球过场动画：球射入球网 → GOAL! → 彩带 → 渐入 ── */}
+      {phase === "kick" && (
+        <div className="absolute inset-0 z-40 overflow-hidden">
+          {/* 体育场镜头拉近 */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="https://images.unsplash.com/photo-1489944440615-453fc2b6a9a9?w=1920&q=75"
+            alt="stadium"
+            referrerPolicy="no-referrer"
+            className="w-full h-full object-cover"
+            style={{ animation: "goal-kenburns 2s ease-out forwards" }}
+          />
+          <div className="absolute inset-0 bg-black/45" />
+
+          {/* 球门（顶部） */}
+          <svg
+            className="absolute left-1/2 -translate-x-1/2"
+            style={{ top: "16%", width: 200, height: 120, opacity: 0.9 }}
+            viewBox="0 0 200 120" fill="none" stroke="rgba(255,255,255,0.55)" strokeWidth="2"
+          >
+            <rect x="20" y="10" width="160" height="86" />
+            {[40, 60, 80, 100, 120, 140, 160].map((x) => <line key={x} x1={x} y1="10" x2={x} y2="96" strokeWidth="0.6" />)}
+            {[28, 46, 64, 82].map((y) => <line key={y} x1="20" y1={y} x2="180" y2={y} strokeWidth="0.6" />)}
+          </svg>
+
+          {/* 飞入球门的足球 */}
+          <div
+            className="absolute left-1/2 text-5xl"
+            style={{ bottom: "8%", transform: "translateX(-50%)", animation: "goal-shoot 0.85s cubic-bezier(0.34,0.2,0.2,1) forwards" }}
+          >
+            ⚽
+          </div>
+
+          {/* GOAL! 迸发 */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div
+              className="font-black tracking-tight text-6xl md:text-8xl"
+              style={{
+                background: "linear-gradient(100deg,#34d399,#38bdf8 55%,#fbbf24)",
+                WebkitBackgroundClip: "text",
+                backgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                animation: "goal-pop 0.7s 0.9s cubic-bezier(0.2,1.5,0.4,1) both",
+              }}
+            >
+              GOAL!
+            </div>
+          </div>
+
+          {/* 收尾黑幕，衔接进入应用 */}
+          <div className="absolute inset-0 bg-[#060c18]" style={{ animation: "goal-veil 0.5s 1.55s ease-in forwards", opacity: 0 }} />
+        </div>
       )}
 
+      {/* 进球彩带 */}
       {particles.map((p, i) => {
         const dir = PARTICLE_DIRS[i % PARTICLE_DIRS.length];
-        const color = i % 3 === 0 ? "#22c55e" : i % 3 === 1 ? "#fbbf24" : "#38bdf8";
+        const color = i % 4 === 0 ? "#34d399" : i % 4 === 1 ? "#fbbf24" : i % 4 === 2 ? "#38bdf8" : "#f472b6";
         return (
           <div
             key={p.id}
-            className="absolute w-2 h-2 rounded-full pointer-events-none"
+            className="absolute w-2 h-2 rounded-sm pointer-events-none z-40"
             style={{
               left: `${p.x}%`,
               top: `${p.y}%`,
               background: color,
               transform: "translate(-50%,-50%)",
-              animation:
-                phase === "glow" || phase === "expand"
-                  ? `particle-fly-${p.id} 1s ease-out forwards`
-                  : "none",
+              animation: phase === "kick" ? `particle-fly-${p.id} 1.1s 0.9s ease-out forwards` : "none",
+              opacity: phase === "kick" ? 1 : 0,
               ["--dx" as string]: `${dir.dx}px`,
               ["--dy" as string]: `${dir.dy}px`,
             }}
@@ -176,8 +213,9 @@ export default function LandingPage() {
       <div
         className="relative z-10 text-center select-none transition-all duration-500"
         style={{
-          opacity: phase === "expand" ? 0 : 1,
-          transform: phase === "expand" ? "scale(0.9)" : "scale(1)",
+          opacity: phase === "kick" ? 0 : 1,
+          transform: phase === "kick" ? "scale(1.05)" : "scale(1)",
+          transition: "opacity 0.35s ease, transform 0.35s ease",
         }}
       >
         {/* 东道主 + 赛事标识 */}
@@ -189,11 +227,8 @@ export default function LandingPage() {
         </div>
 
         <div
-          className="text-[64px] mb-4 transition-transform duration-300"
-          style={{
-            transform: phase === "glow" ? "scale(1.25)" : "scale(1)",
-            filter: phase === "glow" ? "drop-shadow(0 0 40px #22c55e)" : "drop-shadow(0 6px 24px rgba(0,0,0,0.5))",
-          }}
+          className="text-[64px] mb-4"
+          style={{ filter: "drop-shadow(0 6px 24px rgba(0,0,0,0.5))" }}
         >
           ⚽
         </div>
@@ -241,7 +276,25 @@ export default function LandingPage() {
           0%, 100% { opacity: 0.1; transform: scale(1); }
           50% { opacity: 0.9; transform: scale(2); }
         }
-        ${Array.from({ length: 24 }, (_, i) => `
+        @keyframes goal-kenburns {
+          from { transform: scale(1); }
+          to   { transform: scale(1.18); }
+        }
+        /* 足球从底部飞入顶部球门，带旋转 */
+        @keyframes goal-shoot {
+          0%   { transform: translateX(-50%) translateY(0) scale(0.6) rotate(0deg); opacity: 0; }
+          15%  { opacity: 1; }
+          100% { transform: translateX(-50%) translateY(-58vh) scale(1.5) rotate(900deg); opacity: 1; }
+        }
+        @keyframes goal-pop {
+          0%   { opacity: 0; transform: scale(0.3); }
+          100% { opacity: 1; transform: scale(1); }
+        }
+        @keyframes goal-veil {
+          from { opacity: 0; }
+          to   { opacity: 1; }
+        }
+        ${Array.from({ length: 30 }, (_, i) => `
           @keyframes particle-fly-${i} {
             to { transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))); opacity: 0; }
           }
