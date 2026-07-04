@@ -71,6 +71,7 @@ export interface AgentChatMessage {
     sentimentSnapshot?: {
       total: number;
       teams: { teamId: string; pos: number; neg: number; neu: number; net: number; topSnippet: string; sources: string[] }[];
+      factors: { category: string; label: string; icon: string; pos: number; neg: number; neu: number; net: number; topTeam: string; topTeamNet: number; worstTeam: string; worstTeamNet: number }[];
       generalNotes: string[];
     } | null;
   };

@@ -15,7 +15,7 @@ function requireEnv() {
   const { DB_HOST, DB_USER, DB_PASSWORD, DB_NAME } = process.env;
   if (!DB_HOST || !DB_USER || !DB_PASSWORD || !DB_NAME) {
     console.error(
-      "❌ Missing DB env. Set DB_HOST, DB_USER, DB_PASSWORD, DB_NAME (and optional DB_PORT)."
+      "❌ Missing DB env. Set DB_HOST, DB_USER, DB_PASSWORD, DB_NAME (and optional DB_PORT).",
     );
     process.exit(1);
   }
@@ -91,26 +91,33 @@ async function main() {
       await conn.query(CREATE_SQL);
       await conn.query(CREATE_VIEWPOINTS_SQL);
       await conn.query(CREATE_SOURCE_CONFIG_SQL);
-      const defs = ["小红书", "微博", "抖音", "知乎", "Twitter/X", "其他"];
+      const defs = [" ", "微博", "抖音", "知乎", "Twitter/X", "其他"];
       for (const s of defs) {
-        await conn.query("INSERT IGNORE INTO wc_source_config (source,weight,enabled) VALUES (?,1.00,1)", [s]);
+        await conn.query(
+          "INSERT IGNORE INTO wc_source_config (source,weight,enabled) VALUES (?,1.00,1)",
+          [s],
+        );
       }
-      console.log("✅ Tables wc_predictions, wc_viewpoints & wc_source_config are ready.");
+      console.log(
+        "✅ Tables wc_predictions, wc_viewpoints & wc_source_config are ready.",
+      );
     } else if (cmd === "ping") {
       const [rows] = await conn.query("SELECT 1 AS ok");
       console.log("✅ Connected:", rows);
     } else if (cmd === "recent") {
       const [rows] = await conn.query(
-        "SELECT id, champion_name, probability, runner_up_name, sim_count, use_mood, created_at FROM wc_predictions ORDER BY created_at DESC LIMIT 20"
+        "SELECT id, champion_name, probability, runner_up_name, sim_count, use_mood, created_at FROM wc_predictions ORDER BY created_at DESC LIMIT 20",
       );
       console.table(rows);
     } else if (cmd === "leaderboard") {
       const [rows] = await conn.query(
-        "SELECT champion_name, COUNT(*) AS wins, ROUND(AVG(probability),2) AS avg_prob FROM wc_predictions GROUP BY champion_id, champion_name ORDER BY wins DESC LIMIT 10"
+        "SELECT champion_name, COUNT(*) AS wins, ROUND(AVG(probability),2) AS avg_prob FROM wc_predictions GROUP BY champion_id, champion_name ORDER BY wins DESC LIMIT 10",
       );
       console.table(rows);
     } else {
-      console.error(`Unknown command: ${cmd}. Use migrate|recent|leaderboard|ping`);
+      console.error(
+        `Unknown command: ${cmd}. Use migrate|recent|leaderboard|ping`,
+      );
       process.exit(1);
     }
   } finally {

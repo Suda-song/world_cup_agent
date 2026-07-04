@@ -12,14 +12,21 @@ export interface Viewpoint {
   stance: ViewpointStance;
   weight: number; // 1-5
   content: string;
-  link?: string | null; // 原始帖子链接（如小红书/微博URL）
+  link?: string | null; // 原始帖子链接（如 /微博URL）
   author?: string | null;
-  source?: string; // 来源平台：小红书/微博/抖音/知乎/Twitter/其他
+  source?: string; // 来源平台： /微博/抖音/知乎/Twitter/其他
   createdAt?: string;
 }
 
 // 观点来源平台（方便 DBA 分类抓取与分析）
-export const SOURCES = ["小红书", "微博", "抖音", "知乎", "Twitter/X", "其他"] as const;
+export const SOURCES = [
+  " ",
+  "微博",
+  "抖音",
+  "知乎",
+  "Twitter/X",
+  "其他",
+] as const;
 export type ViewpointSource = (typeof SOURCES)[number];
 
 export const CATEGORY_LABEL: Record<ViewpointCategory, string> = {
@@ -60,7 +67,7 @@ function clamp(x: number, lo: number, hi: number): number {
 
 export interface SourceConfig {
   source: string;
-  weight: number;  // 0-3, default 1
+  weight: number; // 0-3, default 1
   enabled: boolean;
 }
 
@@ -68,7 +75,7 @@ export interface SourceConfig {
 export function computeViewpointMods(
   viewpoints: Viewpoint[],
   teamIds: string[],
-  sourceConfig?: SourceConfig[]
+  sourceConfig?: SourceConfig[],
 ): Record<string, number> {
   // Build per-source scale factors from DBA config.
   const sourceScale: Record<string, number> = {};
