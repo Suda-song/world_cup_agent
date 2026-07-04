@@ -1,0 +1,33 @@
+components/agent/TaskQueue.tsx
+  s_b2bb477cc3bc7f::t_2ffeb1b988a132 1-138
+components/agent/FloatingAgent.tsx
+  s_b2bb477cc3bc7f::t_39d417b6427fef 204-221,223-224,226-228,232-234,242,244-245
+  s_b2bb477cc3bc7f::t_760f577b7db5ba 9
+  s_b2bb477cc3bc7f::t_6c8904dc42fbad 339
+  s_b2bb477cc3bc7f::t_823c50a4b665ec 558-565,570,573
+  s_b2bb477cc3bc7f::t_6bf89f83e0b543 238,240
+  s_b2bb477cc3bc7f::t_0ba50be814f900 528-534,537
+  s_b2bb477cc3bc7f::t_792a3f4836e527 181-182,189-191,193
+app/agent/page.tsx
+  s_b2bb477cc3bc7f::t_b3cea8650b74e0 9
+  s_b2bb477cc3bc7f::t_b7d08d5c5e07f5 631-632,643-649,659-660,665
+  s_b2bb477cc3bc7f::t_ac9d19b48f522e 341-342,344-346
+  s_b2bb477cc3bc7f::t_311501406c0686 364-372,375,379-382
+  s_b2bb477cc3bc7f::t_b6724f15cf9510 497,499-500,503-504
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.9",
+  "base_commit_sha": "884a9a3cf310ed4f40c1457c66ec2a25e4e0fd2a",
+  "prompts": {},
+  "sessions": {
+    "s_b2bb477cc3bc7f": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "416cf002-30d1-48e9-b173-4e401d24d8ac",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "songdingan1 <songdingan1@xiaohongshu.com>"
+    }
+  }
+}
