@@ -91,7 +91,7 @@ async function main() {
       await conn.query(CREATE_SQL);
       await conn.query(CREATE_VIEWPOINTS_SQL);
       await conn.query(CREATE_SOURCE_CONFIG_SQL);
-      const defs = [" ", "微博", "抖音", "知乎", "Twitter/X", "其他"];
+      const defs = ["小红书", "微博", "抖音", "知乎", "Twitter/X", "其他"];
       for (const s of defs) {
         await conn.query(
           "INSERT IGNORE INTO wc_source_config (source,weight,enabled) VALUES (?,1.00,1)",

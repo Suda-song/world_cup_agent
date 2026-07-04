@@ -159,7 +159,7 @@ export default function SourcesPage() {
     <div className="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto space-y-6">
       <ImpactIntro
         title="多源舆情采集"
-        subtitle="从  / 微博 / 抖音等平台采集对球队的观点，作为预测的额外数据源。录入的每条观点都会实时参与冠军预测计算。"
+        subtitle="从小红书 / 微博 / 抖音等平台采集对球队的观点，作为预测的额外数据源。录入的每条观点都会实时参与冠军预测计算。"
         steps={[
           { label: "采集观点", desc: "选平台/球队/倾向/权重录入" },
           { label: "加权折算", desc: "按类别·倾向·可信度计算" },
@@ -302,7 +302,7 @@ export default function SourcesPage() {
               onChange={(e) => setContent(e.target.value)}
               rows={3}
               maxLength={500}
-              placeholder="粘贴 /微博笔记文字，例如：梅西状态火热，锋线串联流畅，看好阿根廷卫冕"
+              placeholder="粘贴小红书/微博笔记文字，例如：梅西状态火热，锋线串联流畅，看好阿根廷卫冕"
               className="w-full mt-1 bg-surface-2 border border-border rounded-xl px-3 py-2 text-sm resize-none"
             />
             {analyzed && (

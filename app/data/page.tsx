@@ -465,7 +465,7 @@ export default function DataPage() {
             </div>
           </div>
 
-          {/* ──  运动薯直播 ──── */}
+          {/* ── 小红书运动薯直播 ──── */}
           <div id="xhs-live" className="scroll-mt-20">
             <XhsLiveCard />
           </div>
@@ -532,8 +532,7 @@ function XhsLiveCard() {
           </div>
           <div>
             <div className="text-sm font-semibold text-rose-200">
-              {" "}
-              · 运动薯直播 × AI 舆情解读
+              小红书 · 运动薯直播 × AI 舆情解读
             </div>
             <div className="text-[10px] text-rose-400/60">
               实时直播回放 · 多维情绪指数分析
