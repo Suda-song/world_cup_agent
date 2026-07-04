@@ -2,16 +2,12 @@
 
 import { useState, useEffect } from "react";
 import {
-  simulateDetailedTournament,
   type DetailedSimResult,
   type MatchReasoning as MatchReason,
-  type KnownMatchResult,
 } from "@/lib/prediction/detailedSim";
 import type { TournamentStatus } from "@/app/api/live-results/route";
-import { computeMoodMods, useAppStore } from "@/lib/store";
 import MatchReasoningPanel from "@/components/bracket/MatchReasoning";
 import { getTeam } from "@/lib/data/loader";
-import { TEAMS } from "@/lib/data/teams";
 import StageTimeline from "@/components/common/StageTimeline";
 import { apiUrl } from "@/lib/basePath";
 
@@ -44,46 +40,37 @@ export default function BracketPage() {
   const [liveError, setLiveError] = useState<string | null>(null);
   const [tournamentStatus, setTournamentStatus] =
     useState<TournamentStatus | null>(null);
-  const viewpointMods = useAppStore((s) => s.viewpointMods);
 
   useEffect(() => {
     let cancelled = false;
-    const moodMods = useMood ? computeMoodMods() : {};
-    const mods: Record<string, number> = {};
-    for (const t of TEAMS) {
-      mods[t.id] = (moodMods[t.id] ?? 1) * (viewpointMods[t.id] ?? 1);
-    }
+    setResult(null);
 
+    // 赛程状态（进度标签/真实赛果提示）来自 live-results，轻量无模拟
     fetch(apiUrl("/api/live-results"))
       .then((r) => r.json())
-      .then(
-        (data: {
-          available: boolean;
-          matches?: KnownMatchResult[];
-          groupMatches?: KnownMatchResult[];
-          tournamentStatus?: TournamentStatus;
-          error?: string;
-        }) => {
-          if (cancelled) return;
-          const knockoutMatches: KnownMatchResult[] = data.available ? (data.matches ?? []) : [];
-          const groupMatches: KnownMatchResult[] = data.available ? (data.groupMatches ?? []) : [];
-          if (!data.available && data.error) setLiveError(data.error);
-          else setLiveError(null);
-          if (data.tournamentStatus) setTournamentStatus(data.tournamentStatus);
-          setResult(simulateDetailedTournament(mods, knockoutMatches, groupMatches));
-          setSelectedMatch(null);
-        },
-      )
-      .catch(() => {
+      .then((data: { available: boolean; tournamentStatus?: TournamentStatus; error?: string }) => {
         if (cancelled) return;
-        setResult(simulateDetailedTournament(mods, [], []));
-        setSelectedMatch(null);
-      });
+        if (!data.available && data.error) setLiveError(data.error); else setLiveError(null);
+        if (data.tournamentStatus) setTournamentStatus(data.tournamentStatus);
+      })
+      .catch(() => {});
 
-    return () => {
-      cancelled = true;
-    };
-  }, [useMood, simKey, viewpointMods]);
+    // 赛程模拟在后端运行（/api/simulate-bracket），含实时赛果+舆情权重+心情
+    fetch(apiUrl("/api/simulate-bracket"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ useMood }),
+    })
+      .then((r) => r.json())
+      .then((data: { bracket: DetailedSimResult }) => {
+        if (cancelled) return;
+        setResult(data.bracket);
+        setSelectedMatch(null);
+      })
+      .catch(() => {});
+
+    return () => { cancelled = true; };
+  }, [useMood, simKey]);
 
   if (!result) {
     return (
@@ -114,8 +101,7 @@ export default function BracketPage() {
         <div>
           <h1 className="text-2xl font-bold">赛程对阵图</h1>
           <p className="text-sm text-muted mt-1">
-            完整赛果预测：小组赛 → 32强 → 16强 → 1/4决赛 → 半决赛 → 决赛 ·
-            含比分预测与推理链路
+            本页回答：每场怎么打、谁晋级？—— 完整赛程树 + 每场比分 + 推理链路（后端模拟）
           </p>
         </div>
         <div className="flex items-center gap-3">

@@ -462,7 +462,7 @@ export default function AgentPage() {
         <div className="w-8 h-8 rounded-xl bg-linear-to-br from-pitch-bright to-data flex items-center justify-center text-sm">⚽</div>
         <div>
           <div className="font-bold text-sm leading-tight">世界杯冠军预测 Agent</div>
-          <div className="text-[10px] text-muted">数据采集 · 赛程推演 · 比分预测 · Qwen AI 分析</div>
+          <div className="text-[10px] text-muted">本页回答：问我任何问题 / 一键生成完整预测报告 · Qwen 驱动</div>
         </div>
         <div className="ml-auto flex items-center gap-4">
           <Link href="/bracket" className="hidden sm:flex items-center gap-1 text-[11px] text-data hover:text-data-bright transition-colors">

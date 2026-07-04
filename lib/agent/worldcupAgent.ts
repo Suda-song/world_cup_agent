@@ -103,7 +103,7 @@ function toKnownMatch(m: LiveMatch, stage: Stage): KnownMatchResult | null {
   };
 }
 
-async function getLiveContext(): Promise<{
+export async function getLiveContext(): Promise<{
   context?: LiveTournamentContext;
   warnings: string[];
   liveMatchCount: number;
@@ -152,7 +152,7 @@ async function getLiveContext(): Promise<{
   }
 }
 
-async function loadViewpoints(): Promise<{
+export async function loadViewpoints(): Promise<{
   viewpoints: Viewpoint[];
   sourceConfig: SourceConfig[];
 }> {

@@ -12,10 +12,9 @@ const NAV_SECTIONS: { title: string; hint: string; items: NavItem[] }[] = [
     title: "核心预测",
     hint: "对外展示",
     items: [
-      { href: "/agent", label: "预测 Agent", icon: "M12 3l2.2 5.4L20 10l-5.8 1.6L12 17l-2.2-5.4L4 10l5.8-1.6L12 3z", desc: "一键采集·推演·报告", tag: "AI" },
-      { href: "/dashboard", label: "总览仪表盘", icon: "M3 12l9-9 9 9M5 10v10h14V10", desc: "夺冠概率与关键指标" },
-      { href: "/bracket", label: "赛程对阵图", icon: "M4 4h16v16H4zM4 9h16M4 15h16M9 4v16M15 4v16", desc: "赛程树·比分·推理链路" },
-      { href: "/predict", label: "晋级预测", icon: "M4 18V8l8-5 8 5v10M9 18v-6h6v6", desc: "蒙特卡洛各阶段概率" },
+      { href: "/agent", label: "预测 Agent", icon: "M12 3l2.2 5.4L20 10l-5.8 1.6L12 17l-2.2-5.4L4 10l5.8-1.6L12 3z", desc: "问答 · 一键生成报告", tag: "AI" },
+      { href: "/bracket", label: "赛程对阵图", icon: "M4 4h16v16H4zM4 9h16M4 15h16M9 4v16M15 4v16", desc: "每场比分 · 晋级路径" },
+      { href: "/dashboard", label: "夺冠·晋级概率", icon: "M4 18V8l8-5 8 5v10M9 18v-6h6v6", desc: "谁夺冠 · 各队走多远" },
     ],
   },
   {
